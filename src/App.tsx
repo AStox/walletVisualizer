@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { BrowserRouter as Router, Route, Link } from "react-router-dom";
 
-import RosterInput from "./RosterInput";
-import MatchupDisplay from "./MatchupDisplay";
 import Main from "./Main";
 import ToDo from "./ToDo";
 
