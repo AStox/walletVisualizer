@@ -12,8 +12,8 @@ const Main = () => {
   const balance;
 
   const onSubmit = (data: any) => {
-    // const address = data.address;
-    const address = "0x225ef95fa90f4F7938a5b34234d14768cb4263dd".toLowerCase();
+    const address = data.address.toLowerCase();
+    // const address = "0x225ef95fa90f4F7938a5b34234d14768cb4263dd".toLowerCase();
     console.log("hello");
     fetch(`/api/wallet/${address}`)
       .then((res) => res.json())
