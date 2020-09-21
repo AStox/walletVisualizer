@@ -14,7 +14,7 @@ def main():
     return "hi"
 
 
-@app.route("/<wallet>")
+@app.route("/wallet/<wallet>")
 def get_transactions(wallet):
     response = requests.get(
         f"https://api.etherscan.io/api?module=account&action=txlist&address={wallet}&startblock=0&endblock=99999999&sort=asc&apikey={etherscan_api_key}"

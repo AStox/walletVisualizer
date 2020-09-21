@@ -1,26 +1,27 @@
 import React, { useEffect, useState } from "react";
-import mapKeys from "lodash/mapKeys";
 import { Form, Field } from "react-final-form";
 import validateEthereumAddress from "./validators";
+import { LineChart, Line, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import "./Main.sass";
-import { isObject, isString, map, toPairs } from "lodash";
+import { isObject, isString, map, reduce, toPairs } from "lodash";
 
 const Main = () => {
   const [transactions, setTransactions] = useState([]);
+  const [address, setAddress] = useState("");
+  const balance;
 
   const onSubmit = (data: any) => {
-    const address = data.address;
+    // const address = data.address;
+    const address = "0x225ef95fa90f4F7938a5b34234d14768cb4263dd".toLowerCase();
     console.log("hello");
     fetch(`/api/wallet/${address}`)
       .then((res) => res.json())
-      .then((data) => setTransactions(data.transactions));
-    // .then((data) => {
-    //   setTransactions(data);
-    // });
+      .then((data) => {
+        setTransactions(data.transactions);
+        setAddress(address);
+      });
   };
-
-  console.log(transactions);
 
   return (
     <div className="Main" data-testid="Main">
@@ -34,7 +35,6 @@ const Main = () => {
                 name="address"
                 component="input"
                 placeholder="0x"
-                value="0x225ef95fa90f4F7938A5b34234d14768cB4263dd"
                 // validate={validateEthereumAddress}
                 render={({ input, meta }) => (
                   <div>
@@ -53,7 +53,7 @@ const Main = () => {
           )}
         />
       </div>
-      {transactions.length > 0 &&
+      {/* {transactions.length > 0 &&
         map(transactions, (transaction) => (
           <ul key={transaction.hash}>
             {map(toPairs(transaction), (value) => (
@@ -62,9 +62,57 @@ const Main = () => {
               </li>
             ))}
           </ul>
-        ))}
+        ))} */}
+      <LineChart
+        width={800}
+        height={400}
+        data={formatTransactions(transactions, address)}
+      >
+        <Line type="monotone" dataKey="balance" stroke="#8884d8" />
+        <CartesianGrid stroke="#ccc" />
+        <XAxis dataKey="timestamp" />
+        <YAxis />
+      </LineChart>
     </div>
   );
+};
+
+const formatTransactions = (transactions, wallet) => {
+  let ret = [];
+  reduce(
+    map(transactions, (transaction) => ({
+      ...transaction,
+      value: transaction.value * 0.000000000000000001,
+    })),
+    (balance, transaction) => {
+      console.log(wallet, transaction.to);
+      transaction.to === wallet
+        ? (balance += transaction.value)
+        : (balance -= transaction.value);
+      // transaction.balance = balance;
+      ret.push({ ...transaction, balance });
+      return balance;
+    },
+    0
+  );
+  // for (let i = 0; i < transactions.length; i++) {
+  //   let balance;
+  //   console.log(transactions[i].value);
+  //   if (transactions[i].value) {
+  //     balance =
+  //       i === 0
+  //         ? transactions[i].value
+  //         : transactions[i - 1].balance + transactions[i].value;
+  //   } else {
+  //     balance = i === 0 ? 0 : transactions[i - 1].balance;
+  //   }
+  //   ret.push({
+  //     ...transactions[i],
+  //     balance,
+  //   });
+  // }
+  console.log(ret);
+  return ret;
 };
 
 export default Main;
