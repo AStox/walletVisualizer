@@ -1,24 +1,34 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Form, Field } from "react-final-form";
-import validateEthereumAddress from "./validators";
-import { LineChart, Line, CartesianGrid, XAxis, YAxis } from "recharts";
+import {
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from "recharts";
 
 import "./Main.sass";
-import { isObject, isString, map, reduce, toPairs } from "lodash";
+import { forEach, isObject, map, reduce, toPairs } from "lodash";
+import Transaction from "./Transaction";
 
 const Main = () => {
-  const [transactions, setTransactions] = useState([]);
+  const [transactions, setTransactions] = useState<Transaction[] | undefined>(
+    undefined
+  );
+  const [transaction, setTransaction] = useState({});
   const [address, setAddress] = useState("");
-  const balance;
 
   const onSubmit = (data: any) => {
     const address = data.address.toLowerCase();
     // const address = "0x225ef95fa90f4F7938a5b34234d14768cb4263dd".toLowerCase();
-    console.log("hello");
     fetch(`/api/wallet/${address}`)
       .then((res) => res.json())
       .then((data) => {
-        setTransactions(data.transactions);
+        setTransactions(
+          formatTransactions(data.transactions as Transaction[], address)
+        );
         setAddress(address);
       });
   };
@@ -53,65 +63,70 @@ const Main = () => {
           )}
         />
       </div>
-      {/* {transactions.length > 0 &&
-        map(transactions, (transaction) => (
-          <ul key={transaction.hash}>
-            {map(toPairs(transaction), (value) => (
-              <li key={`${transaction.hash}-${value[0]}`}>
-                {value[0]}: {value[1]}
-              </li>
-            ))}
-          </ul>
-        ))} */}
-      <LineChart
-        width={800}
-        height={400}
-        data={formatTransactions(transactions, address)}
-      >
-        <Line type="monotone" dataKey="balance" stroke="#8884d8" />
-        <CartesianGrid stroke="#ccc" />
-        <XAxis dataKey="timestamp" />
-        <YAxis />
-      </LineChart>
+      <div>
+        <LineChart width={800} height={400} data={transactions}>
+          {/* <Tooltip content={<Transaction onChange={setTransaction} />} />
+           */}
+          <Tooltip />
+          <Line type="monotone" dataKey="balances.ETH" stroke="#8884d8" />
+          <Line type="monotone" dataKey="balances.UNI" stroke="#8884d8" />
+          <Line type="monotone" dataKey="balances.USDT" stroke="#8884d8" />
+          <CartesianGrid stroke="#ccc" />
+          <XAxis dataKey="timestamp" />
+          <YAxis />
+        </LineChart>
+      </div>
+      <div>
+        <ul>{listParams(transaction)}</ul>
+      </div>
     </div>
   );
 };
 
-const formatTransactions = (transactions, wallet) => {
-  let ret = [];
+const listParams = (obj: object) => {
+  return map(toPairs(obj), (value) => {
+    return !isObject(value[1]) ? (
+      <li key={value[0]}>
+        {value[0]}: {value[1]}
+      </li>
+    ) : (
+      <li>
+        {value[0]}:<ul>{listParams(value[1])}</ul>
+      </li>
+    );
+  });
+};
+
+const formatTransactions = (transactions: Transaction[], wallet: string) => {
+  let ret = [] as Transaction[];
   reduce(
-    map(transactions, (transaction) => ({
-      ...transaction,
-      value: transaction.value * 0.000000000000000001,
-    })),
-    (balance, transaction) => {
-      console.log(wallet, transaction.to);
-      transaction.to === wallet
-        ? (balance += transaction.value)
-        : (balance -= transaction.value);
-      // transaction.balance = balance;
-      ret.push({ ...transaction, balance });
-      return balance;
+    transactions,
+    (balances, transaction) => {
+      const flow = transaction.to === wallet ? 1 : -1;
+      // console.log(balances);
+      let tempBal = {} as Values;
+      forEach(transaction.values, (value, key) => {
+        // console.log(key, key === "ETH");
+        tempBal = { ...balances };
+        tempBal[key] =
+          key === "ETH"
+            ? (balances[key] || 0) + value * flow
+            : (balances[key] || 0) + value * flow * -1;
+        balances[key] =
+          key === "ETH"
+            ? (balances[key] || 0) + value * flow
+            : (balances[key] || 0) + value * flow * -1;
+      });
+      console.log(tempBal);
+      const newTrans = { ...transaction, balances: tempBal };
+      console.log(newTrans);
+      // console.log(balances);
+      ret.push(newTrans);
+      console.log(ret);
+      return balances;
     },
-    0
+    {} as Values
   );
-  // for (let i = 0; i < transactions.length; i++) {
-  //   let balance;
-  //   console.log(transactions[i].value);
-  //   if (transactions[i].value) {
-  //     balance =
-  //       i === 0
-  //         ? transactions[i].value
-  //         : transactions[i - 1].balance + transactions[i].value;
-  //   } else {
-  //     balance = i === 0 ? 0 : transactions[i - 1].balance;
-  //   }
-  //   ret.push({
-  //     ...transactions[i],
-  //     balance,
-  //   });
-  // }
-  console.log(ret);
   return ret;
 };
 
