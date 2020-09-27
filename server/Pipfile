@@ -5,8 +5,11 @@ verify_ssl = true
 
 [dev-packages]
 web3 = "*"
+uniswap-python = "*"
 
 [packages]
+flask = "*"
+eth-abi = "*"
 
 [requires]
 python_version = "3.8"

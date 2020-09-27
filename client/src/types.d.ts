@@ -19,6 +19,10 @@ type Transaction = {
   value: number;
   values: Values;
   balances: Values;
+  fromName: string;
+  toName: string;
+  txCost: number;
+  name: string;
 };
 
 type Values = {
