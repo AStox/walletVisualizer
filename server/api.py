@@ -1,5 +1,6 @@
 import requests
 import os
+import time
 from flask import Flask
 import json
 from web3.auto.infura import w3
@@ -17,6 +18,7 @@ bat = "0x0D8775F648430679A709E98d2b0Cb6250d2887EF"
 dai = "0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359"
 
 contracts = json.load(open("contracts.json", "r"))
+contracts["owner"] = {value.lower(): key for key, value in contracts["address"].items()}
 
 
 @app.route("/")
@@ -33,8 +35,6 @@ def get_token_balance(my_address, token_name, block="latest"):
     contract_abi = contracts["abi"][token_name]
     contract_address = w3.toChecksumAddress(contracts["address"][token_name])
     contract = w3.eth.contract(contract_address, abi=contract_abi)
-    print(contract.functions.name().call())
-    print(contract.functions.name().call())
     balance = contract.functions.balanceOf(my_address).call()
     # int r0 = contract.functions.price0CumulativeLast().call()
     # print(r0)
@@ -65,106 +65,123 @@ def get_transactions(wallet):
             "ETH": float(w3.fromWei(int(transaction["value"]), "ether"))
             * (1 if deposit else -1)
         }
-        for key, address in contracts["address"].items():
-            if transaction["from"].lower() == address.lower():
-                transaction["fromName"] = key
-            if transaction["to"].lower() == address.lower():
-                transaction["toName"] = key
-                contract_abi = contracts["abi"].get(key)
-                if contract_abi:
-                    contract_address = w3.toChecksumAddress(contracts["address"][key])
-                    contract = w3.eth.contract(contract_address, abi=contract_abi)
-                    if len(transaction["input"]) > 4:
-                        input = contract.decode_function_input(transaction["input"])
-                        transaction["input"] = str(input)
-                        for func in contract.functions.__dir__():
-                            if input[0].fn_name == func:
-                                transaction["name"] = func
-                                if func == "approve":
-                                    print("approve")
-                                if func == "swapExactTokensForETH":
-                                    transaction["value"] = input[1]["amountOutMin"]
-                                    transaction["values"]["ETH"] = float(
-                                        w3.fromWei(input[1]["amountOutMin"], "ether")
+        key = contracts["owner"].get(transaction["to"].lower())
+        address = transaction["from"].lower()
+        transaction["fromName"] = contracts["owner"].get(transaction["from"].lower())
+        transaction["toName"] = key
+        contract_abi = contracts["abi"].get(key)
+        # block = transaction["blockNumber"]
+        if contract_abi:
+            contract_address = w3.toChecksumAddress(contracts["address"][key])
+            contract = w3.eth.contract(contract_address, abi=contract_abi)
+            if len(transaction["input"]) > 4:
+                input = contract.decode_function_input(transaction["input"])
+                transaction["input"] = str(input)
+                func = input[0].fn_name
+                transaction["name"] = func
+                if func == "approve":
+                    print("approve")
+                if func == "swapExactTokensForETH":
+                    transaction["value"] = input[1]["amountOutMin"]
+                    transaction["values"]["ETH"] = float(
+                        w3.fromWei(input[1]["amountOutMin"], "ether")
+                    )
+                if func == "swapETHForExactTokens":
+                    address = input[1]["path"][-1].lower()
+                    key = contracts["owner"].get(input[1]["path"][-1].lower())
+                    txHash = transaction["hash"]
+                    time.sleep(0.5)
+                    internalTx = requests.get(
+                        f"https://api.etherscan.io/api?module=account&action=txlistinternal&txhash={txHash}&apikey={etherscan_api_key}"
+                    ).json()["result"]
+                    for tx in internalTx:
+                        if tx["to"].lower() == wallet:
+                            transaction["values"]["ETH"] += (
+                                float(
+                                    w3.fromWei(
+                                        int(tx["value"]),
+                                        "ether",
                                     )
-                                if func == "swapETHForExactTokens":
-                                    print(input[1]["path"][-1].lower())
-                                    for token, address in contracts["address"].items():
-                                        if (
-                                            input[1]["path"][-1].lower()
-                                            == address.lower()
-                                        ):
-                                            print(token)
-                                            print(input[1])
-                                            print(
-                                                w3.fromWei(
-                                                    input[1]["amountOut"], "ether"
-                                                )
-                                            )
-                                            transaction["values"][token] = (
-                                                float(
-                                                    w3.fromWei(
-                                                        input[1]["amountOut"], "gwei"
-                                                    )
-                                                )
-                                                if token == "USDT"
-                                                else float(
-                                                    w3.fromWei(
-                                                        input[1]["amountOut"], "ether"
-                                                    )
-                                                )
-                                            )
-                                if func == "swapExactETHForTokens":
-                                    for token, address in contracts["address"].items():
-                                        if (
-                                            input[1]["path"][-1].lower()
-                                            == address.lower()
-                                        ):
-                                            transaction["values"][token] = float(
-                                                w3.fromWei(
-                                                    input[1]["amountOutMin"], "ether"
-                                                )
-                                            )
+                                )
+                                - transaction["txCost"]
+                            )
 
-                                if func == "addLiquidityETH":
-                                    # print(input[1])
-                                    for token, address in contracts["address"].items():
-                                        if input[1]["token"].lower() == address.lower():
-                                            # print(input[1])
-                                            # print(contracts["address"][f"ETH/{token}"])
-                                            tokenContract = w3.eth.contract(
-                                                w3.toChecksumAddress(
-                                                    contracts["address"][f"ETH/{token}"]
-                                                ),
-                                                abi=contracts["abi"][f"ETH/{token}"],
-                                            )
-                                            transaction["values"][
-                                                f"ETH/{token}"
-                                            ] = float(
-                                                w3.fromWei(
-                                                    tokenContract.functions.balanceOf(
-                                                        w3.toChecksumAddress(wallet)
-                                                    ).call(),
-                                                    "ether",
-                                                )
-                                            )
-                                            transaction["values"][token] = (
-                                                float(
-                                                    w3.fromWei(
-                                                        input[1]["amountTokenDesired"],
-                                                        "ether",
-                                                    )
-                                                )
-                                                * -1
-                                            )
-                                if func == "stakeWithPermit":
-                                    print("stakeWithPermit")
-                                if func == "deposit":
-                                    print("deposit")
-                                if func == "withdraw":
-                                    print("withdraw")
-                                if func == "removeLiquidityETHWithPermit":
-                                    print("removeLiquidityETHWithPermit")
+                    transaction["values"][key] = (
+                        float(w3.fromWei(input[1]["amountOut"], "gwei"))
+                        if key == "USDT"
+                        else float(w3.fromWei(input[1]["amountOut"], "ether"))
+                    )
+                    # transaction["values"]["ETH"] = float(
+                    #     w3.fromWei(
+                    #         input[1]["amountOutMin"], "ether"
+                    #     )
+                    # )
+                if func == "swapExactETHForTokens":
+                    address = input[1]["path"][-1].lower()
+                    token = contracts["owner"].get(address)
+                    txHash = transaction["hash"]
+                    logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
+                    contract_abi = contracts["abi"][f"ETH/{token}"]
+                    contract_address = w3.toChecksumAddress(
+                        contracts["address"][f"ETH/{token}"]
+                    )
+                    contract = w3.eth.contract(contract_address, abi=contract_abi)
+                    if len(logs) > 0:
+                        print(token)
+                        print(
+                            float(
+                                w3.fromWei(
+                                    contract.events.Swap().processLog(logs[-1])["args"][
+                                        "amount0Out"
+                                    ],
+                                    "ether",
+                                )
+                            )
+                        )
+                        transaction["values"][token] = float(
+                            w3.fromWei(
+                                contract.events.Swap().processLog(logs[-1])["args"][
+                                    "amount0Out"
+                                ],
+                                "ether",
+                            )
+                        )
+
+                if func == "addLiquidityETH":
+                    address = input[1]["token"].lower()
+                    token = contracts["owner"].get(input[1]["token"].lower())
+                    # print(input[1])
+                    # print(contracts["address"][f"ETH/{token}"])
+                    if token:
+                        tokenContract = w3.eth.contract(
+                            w3.toChecksumAddress(contracts["address"][f"ETH/{token}"]),
+                            abi=contracts["abi"][f"ETH/{token}"],
+                        )
+                        transaction["values"][f"ETH/{token}"] = float(
+                            w3.fromWei(
+                                tokenContract.functions.balanceOf(
+                                    w3.toChecksumAddress(wallet)
+                                ).call(),
+                                "ether",
+                            )
+                        )
+                    transaction["values"][token] = (
+                        float(
+                            w3.fromWei(
+                                int(input[1]["amountTokenDesired"]),
+                                "ether",
+                            )
+                        )
+                        * -1
+                    )
+                if func == "stakeWithPermit":
+                    print("stakeWithPermit")
+                if func == "deposit":
+                    print("deposit")
+                if func == "withdraw":
+                    print("withdraw")
+                if func == "removeLiquidityETHWithPermit":
+                    print("removeLiquidityETHWithPermit")
 
         # transaction["values"][key] = get_token_balance(wallet, key)
         # print(transaction["values"])

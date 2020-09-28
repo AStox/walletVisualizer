@@ -70,11 +70,13 @@ const formatTransactions = (transactions: Transaction[], wallet: string) => {
       const flow = transaction.to === wallet ? 1 : -1;
       let tempBal = {} as Values;
       forEach(transaction.values, (value, key) => {
+        console.log(key, value);
         tempBal = { ...balances };
         if (transaction.isError == 0) {
-          tempBal[key] = (balances[key] || 0) + value - transaction.txCost;
+          tempBal[key] = (balances[key] || 0) + value;
           balances[key] = tempBal[key];
         }
+        console.log(tempBal[key]);
       });
       const newTrans = { ...transaction, balances: tempBal };
       ret.push(newTrans);
