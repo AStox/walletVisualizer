@@ -22,7 +22,9 @@ const CustomTooltip = (props) => {
           name: props.payload[0].payload.name,
           from: props.payload[0].payload.fromName,
           to: props.payload[0].payload.toName,
-          balances: props.payload[0].payload.balances,
+          balances: props.showUSD
+            ? props.payload[0].payload.balancesUSD
+            : props.payload[0].payload.balances,
         })}
     </div>
   );

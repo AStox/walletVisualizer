@@ -15,9 +15,16 @@ interface Props {
   targetRef: MutableRefObject<undefined>;
   setTransaction: Dispatch<SetStateAction<Transaction>>;
   transactions: Transaction[];
+  showUSD: boolean;
 }
 
-const WalletGraph = ({ targetRef, transactions, setTransaction }: Props) => {
+const WalletGraph = ({
+  targetRef,
+  transactions,
+  setTransaction,
+  showUSD,
+}: Props) => {
+  console.log(transactions);
   return (
     <div className="WalletGraph">
       <LineChart
@@ -25,35 +32,39 @@ const WalletGraph = ({ targetRef, transactions, setTransaction }: Props) => {
         height={400}
         data={transactions}
       >
-        <Tooltip content={<CustomTooltip setTransaction={setTransaction} />} />
+        <Tooltip
+          content={
+            <CustomTooltip setTransaction={setTransaction} showUSD={showUSD} />
+          }
+        />
         <Line
           type="monotone"
-          dataKey="balances.ETH"
-          stroke="#BEBBBB"
+          dataKey={showUSD ? "balancesUSD.ETH" : "balances.ETH"}
+          stroke="#C6920C"
           strokeWidth="3"
         />
         <Line
           type="monotone"
-          dataKey="balances.UNI"
-          stroke="#BEBBBB"
+          dataKey={showUSD ? "balancesUSD.UNI" : "balances.UNI"}
+          stroke="#1DB6D4"
           strokeWidth="3"
         />
         <Line
           type="monotone"
-          dataKey="balances.USDT"
-          stroke="#BEBBBB"
+          dataKey={showUSD ? "balancesUSD.USDT" : "balances.USDT"}
+          stroke="#E25635"
           strokeWidth="3"
         />
-        <CartesianGrid stroke="#BEBBBB" vertical={false} />
+        <CartesianGrid stroke="#2B1820" vertical={false} />
         <XAxis
           dataKey="timestamp"
-          stroke="#BEBBBB"
+          stroke="#C52E52"
           tick={false}
           axisLine={false}
           padding={{ left: 60, right: 60 }}
         />
         <YAxis
-          stroke="#BEBBBB"
+          stroke="#C52E52"
           tickSize={0}
           axisLine={false}
           mirror={true}

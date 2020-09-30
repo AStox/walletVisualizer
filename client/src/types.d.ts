@@ -23,6 +23,7 @@ type Transaction = {
   toName: string;
   txCost: number;
   name: string;
+  prices: Values;
 };
 
 type Values = {

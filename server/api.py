@@ -17,6 +17,7 @@ eth = "0x0000000000000000000000000000000000000000"
 bat = "0x0D8775F648430679A709E98d2b0Cb6250d2887EF"
 dai = "0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359"
 
+prices = json.load(open("prices.json", "r"))
 contracts = json.load(open("contracts.json", "r"))
 contracts["owner"] = {value.lower(): key for key, value in contracts["address"].items()}
 
@@ -108,7 +109,7 @@ def get_transactions(wallet):
                             )
 
                     transaction["values"][key] = (
-                        float(w3.fromWei(input[1]["amountOut"], "gwei"))
+                        float(w3.fromWei(input[1]["amountOut"], "mwei"))
                         if key == "USDT"
                         else float(w3.fromWei(input[1]["amountOut"], "ether"))
                     )
@@ -135,6 +136,12 @@ def get_transactions(wallet):
                                 ],
                                 "ether",
                             )
+                        )
+                        transaction["values"]["ETH"] = (
+                            -float(
+                                w3.fromWei(int(transaction["value"]), "ether"),
+                            )
+                            - transaction["txCost"]
                         )
 
                 if func == "addLiquidityETH":
@@ -183,15 +190,17 @@ def get_transactions(wallet):
                         )
 
                 if func == "stakeWithPermit":
-                    print("stakeWithPermit")
+                    transaction["values"]["ETH"] = -transaction["txCost"]
                 if func == "deposit":
                     print("deposit")
                 if func == "withdraw":
                     print("withdraw")
                 if func == "removeLiquidityETHWithPermit":
                     print("removeLiquidityETHWithPermit")
-
         # transaction["values"][key] = get_token_balance(wallet, key)
         # print(transaction["values"])
+        transaction["prices"] = {}
+        for value, token in enumerate(transaction["values"]):
+            transaction["prices"][token] = prices["0"][token]
 
     return {"transactions": transactions}

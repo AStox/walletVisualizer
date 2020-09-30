@@ -1,10 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-import "./Main.sass";
 import { forEach, isObject, map, reduce, toPairs } from "lodash";
 import AddressInput from "./AddressInput";
 import WalletGraph from "./WalletGraph";
 import { listParams } from "./Utils";
+import Toggle from "react-toggle";
+import { IoLogoUsd } from "react-icons/io";
+import { FaEthereum } from "react-icons/fa";
+
+import "./Main.sass";
+import "react-toggle/style.css";
 
 const Main = () => {
   const targetRef = useRef();
@@ -13,6 +18,7 @@ const Main = () => {
   );
   const [transaction, setTransaction] = useState({});
   const [address, setAddress] = useState("");
+  const [showUSD, setShowUSD] = useState(false);
 
   // useEffect(() => {
   //   // if (targetRef.current) {
@@ -47,12 +53,22 @@ const Main = () => {
         <div className="input-container">
           <AddressInput onSubmit={onSubmit} />
         </div>
+        <div className="toggle-container">
+          <Toggle
+            onChange={setShowUSD}
+            icons={{
+              checked: <FaEthereum />,
+              unchecked: <IoLogoUsd />,
+            }}
+          />
+        </div>
       </div>
       <div ref={targetRef}>
         <WalletGraph
           targetRef={targetRef}
           setTransaction={setTransaction}
           transactions={transactions}
+          showUSD={showUSD}
         />
       </div>
       <div>
@@ -67,18 +83,23 @@ const formatTransactions = (transactions: Transaction[], wallet: string) => {
   reduce(
     transactions,
     (balances, transaction) => {
-      const flow = transaction.to === wallet ? 1 : -1;
       let tempBal = {} as Values;
       forEach(transaction.values, (value, key) => {
-        console.log(key, value);
         tempBal = { ...balances };
         if (transaction.isError == 0) {
           tempBal[key] = (balances[key] || 0) + value;
           balances[key] = tempBal[key];
         }
-        console.log(tempBal[key]);
       });
-      const newTrans = { ...transaction, balances: tempBal };
+      const usd = reduce(
+        tempBal,
+        (obj, value, key) => ({
+          ...obj,
+          [key]: value * transaction.prices[key],
+        }),
+        {}
+      );
+      const newTrans = { ...transaction, balances: tempBal, balancesUSD: usd };
       ret.push(newTrans);
       return balances;
     },
