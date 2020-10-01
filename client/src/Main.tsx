@@ -9,7 +9,7 @@ import { IoLogoUsd } from "react-icons/io";
 import { FaEthereum } from "react-icons/fa";
 
 import "./Main.sass";
-import "react-toggle/style.css";
+// import "react-toggle/style.css";
 
 const Main = () => {
   const targetRef = useRef();
@@ -55,6 +55,7 @@ const Main = () => {
         </div>
         <div className="toggle-container">
           <Toggle
+            className={"custom-toggle"}
             onChange={setShowUSD}
             icons={{
               checked: <FaEthereum />,

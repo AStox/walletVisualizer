@@ -19,3 +19,19 @@
     .toggle-container
       flex: 0
       margin: auto 0
+
+.custom-toggle.react-toggle--checked, .custom-toggle.react-toggle
+  .react-toggle-thumb
+    background-color: $accent
+    border: 0
+  .react-toggle-track
+    background-color: $accent1
+    &:hover
+      background-color: $accent1
+
+.custom-toggle.react-toggle--checked, .custom-toggle.react-toggle
+  &:hover
+    .react-toggle-track
+      background-color: $accent1
+      &:hover
+        background-color: $accent1
