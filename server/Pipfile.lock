@@ -399,11 +399,11 @@
         },
         "uniswap-python": {
             "hashes": [
-                "sha256:2977dc90c62235914e474b653c55aa006c509aed69e2b3de75a43ec90183a3ba",
-                "sha256:c007142ea10b49a9d0d75ccbde1a9e9b59b47f2f35bca9cba1e1f4da22489f16"
+                "sha256:6e0c7edde271c1f9181e750e674a35468e40091c927a10b5b776e2de48eafc96",
+                "sha256:da0da975db62a101431cd63c8b9ba0ea397c900bd736e9488831a3ab29c77eec"
             ],
             "index": "pypi",
-            "version": "==0.4.3"
+            "version": "==0.4.4"
         },
         "urllib3": {
             "hashes": [

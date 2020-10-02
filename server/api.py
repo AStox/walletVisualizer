@@ -1,6 +1,7 @@
 import requests
 import os
 import time
+import datetime
 from flask import Flask
 import json
 from web3.auto.infura import w3
@@ -52,11 +53,13 @@ def get_transactions(wallet):
     )
     transactions = response.json()["result"]
     for transaction in transactions:
+        transaction["prices"] = {}
         deposit = transaction["to"].lower() == wallet
         transaction["values"] = {
             "ETH": float(w3.fromWei(int(transaction["value"]), "ether"))
             * (1 if deposit else -1)
         }
+        transaction["prices"]["ETH"] = prices["0"]["ETH"]
         transaction["txCost"] = 0
         if transaction["from"].lower() == wallet.lower():
             transaction["txCost"] = float(
@@ -65,8 +68,6 @@ def get_transactions(wallet):
                     "ether",
                 )
             )
-            # transaction["values"]["ETH"] = transaction["txCost"]
-
         key = contracts["owner"].get(transaction["to"].lower())
         address = transaction["from"].lower()
         transaction["fromName"] = contracts["owner"].get(transaction["from"].lower())
@@ -83,11 +84,13 @@ def get_transactions(wallet):
                 transaction["name"] = func
                 if func == "approve":
                     transaction["values"]["ETH"] -= transaction["txCost"]
+                    transaction["prices"]["ETH"] = prices["0"]["ETH"]
                 if func == "swapExactTokensForETH":
                     transaction["value"] = input[1]["amountOutMin"]
                     transaction["values"]["ETH"] += float(
                         w3.fromWei(input[1]["amountOutMin"], "ether")
                     )
+                    transaction["prices"]["ETH"] = prices["0"]["ETH"]
                 if func == "swapETHForExactTokens":
                     address = input[1]["path"][-1].lower()
                     key = contracts["owner"].get(input[1]["path"][-1].lower())
@@ -107,17 +110,14 @@ def get_transactions(wallet):
                                 )
                                 - transaction["txCost"]
                             )
+                            transaction["prices"]["ETH"] = prices["0"]["ETH"]
 
                     transaction["values"][key] = (
                         float(w3.fromWei(input[1]["amountOut"], "mwei"))
                         if key == "USDT"
                         else float(w3.fromWei(input[1]["amountOut"], "ether"))
                     )
-                    # transaction["values"]["ETH"] = float(
-                    #     w3.fromWei(
-                    #         input[1]["amountOutMin"], "ether"
-                    #     )
-                    # )
+                    transaction["prices"][key] = prices["0"][key]
                 if func == "swapExactETHForTokens":
                     address = input[1]["path"][-1].lower()
                     token = contracts["owner"].get(address)
@@ -137,12 +137,14 @@ def get_transactions(wallet):
                                 "ether",
                             )
                         )
+                        transaction["prices"][token] = prices["0"][token]
                         transaction["values"]["ETH"] = (
                             -float(
                                 w3.fromWei(int(transaction["value"]), "ether"),
                             )
                             - transaction["txCost"]
                         )
+                        transaction["prices"]["ETH"] = prices["0"]["ETH"]
 
                 if func == "addLiquidityETH":
                     address = input[1]["token"].lower()
@@ -160,6 +162,9 @@ def get_transactions(wallet):
                                 "ether",
                             )
                         )
+                        transaction["prices"][f"ETH/{token}"] = prices["0"][
+                            f"ETH/{token}"
+                        ]
                     pool = f"WETH/{token}"
                     tokenContract = w3.eth.contract(
                         w3.toChecksumAddress(contracts["address"][pool]),
@@ -178,6 +183,7 @@ def get_transactions(wallet):
                             )
                             - transaction["txCost"]
                         )
+                        transaction["prices"]["ETH"] = prices["0"]["ETH"]
                         if transaction["values"].get(token) == None:
                             transaction["values"][token] = 0
                         transaction["values"][token] -= float(
@@ -188,6 +194,7 @@ def get_transactions(wallet):
                                 "ether",
                             )
                         )
+                        transaction["prices"][token] = prices["0"][token]
 
                 if func == "stakeWithPermit":
                     transaction["values"]["ETH"] = -transaction["txCost"]
@@ -199,8 +206,98 @@ def get_transactions(wallet):
                     print("removeLiquidityETHWithPermit")
         # transaction["values"][key] = get_token_balance(wallet, key)
         # print(transaction["values"])
-        transaction["prices"] = {}
-        for value, token in enumerate(transaction["values"]):
-            transaction["prices"][token] = prices["0"][token]
 
+        # for value, token in enumerate(transaction["values"]):
+        #     transaction["prices"][token] = prices["0"][token]
+    transactions = fill_out_dates(transactions)
     return {"transactions": transactions}
+
+
+def fill_out_dates(transactions):
+    fill_dates = []
+    print(
+        (int(transactions[2]["timeStamp"]) - int(transactions[0]["timeStamp"]))
+        / (60 * 60 * 24)
+    )
+    print(transactions[1]["timeStamp"])
+    print(
+        int(
+            (int(transactions[1]["timeStamp"]) - int(transactions[0]["timeStamp"]))
+            / (60 * 60 * 24)
+        )
+    )
+    for a, tx in enumerate(transactions[0:-2]):
+        for i in [
+            j * 60 * 60 * 24 + int(transactions[a]["timeStamp"])
+            for j in range(
+                0,
+                int(
+                    (
+                        int(transactions[a + 1]["timeStamp"])
+                        - int(transactions[a]["timeStamp"])
+                    )
+                    / (60 * 60 * 24)
+                ),
+            )
+        ]:
+            values = {}
+            token_prices = {}
+            for key, value in transactions[a]["values"].items():
+                values[key] = 0
+                token_prices[key] = prices["0"][key]
+            fill_dates.append(
+                {
+                    "timeStamp": i,
+                    "values": values,
+                    "prices": token_prices,
+                    "isError": 0,
+                }
+            )
+
+    for i in [
+        j * 60 * 60 * 24 + int(transactions[-1]["timeStamp"])
+        for j in range(
+            0,
+            int(
+                (
+                    (
+                        datetime.datetime(
+                            *datetime.datetime.utcnow().timetuple()[:3]
+                        ).timestamp()
+                        / (60 * 60 * 24)
+                        - int(transactions[-1]["timeStamp"]) / (60 * 60 * 24)
+                    )
+                )
+            ),
+        )
+    ]:
+        values = {}
+        token_prices = {}
+        for key, value in transactions[-1]["values"].items():
+            values[key] = 0
+            token_prices[key] = prices["0"][key]
+        fill_dates.append(
+            {"timeStamp": i, "values": values, "prices": token_prices, "isError": 0}
+        )
+
+    for i in fill_dates:
+        print(i)
+        transactions.append(i)
+    transactions.sort(key=sortTransactions)
+    return transactions
+    # # print(
+    # #     datetime.datetime.fromtimestamp(
+    # #         datetime.datetime(*datetime.datetime.utcnow().timetuple()[:3])
+    # #     )
+    # # )
+    # # print(datetime.datetime(datetime.datetime.utcnow().date()).timestamp)
+    # print(datetime.datetime.utcnow().timestamp() % (60 * 60 * 24 * 1000))
+    # print(
+    #     datetime.datetime.utcnow().timestamp()
+    #     - datetime.datetime.utcnow().timestamp() % (60 * 60 * 24 * 1000)
+    # )
+    # for i in range(transactions[0], datetime.)
+
+
+def sortTransactions(e):
+    return int(e["timeStamp"])

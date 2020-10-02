@@ -13,12 +13,15 @@ const CustomTooltip = (props) => {
       props.setTransaction(props.payload[0].payload);
     }
   });
-
+  const options = { year: "numeric", month: "long", day: "numeric" };
   return (
     <div className="CustomTooltip">
       {props.payload &&
         props.payload[0] &&
         listParams({
+          date: new Date(
+            props.payload[0].payload.timeStamp * 1000
+          ).toLocaleDateString("en-US", options),
           name: props.payload[0].payload.name,
           from: props.payload[0].payload.fromName,
           to: props.payload[0].payload.toName,

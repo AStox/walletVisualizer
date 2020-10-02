@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-import { forEach, isObject, map, reduce, toPairs } from "lodash";
+import { forEach, isObject, map, reduce, sortBy, toPairs } from "lodash";
 import AddressInput from "./AddressInput";
 import WalletGraph from "./WalletGraph";
 import { listParams } from "./Utils";
@@ -106,6 +106,7 @@ const formatTransactions = (transactions: Transaction[], wallet: string) => {
     },
     {} as Values
   );
+  // return sortBy(ret, "timeStamp");
   return ret;
 };
 

@@ -8,7 +8,7 @@ export const listParams = (obj: object) => {
         {value[0]}: {value[1]}
       </li>
     ) : (
-      <li>
+      <li key={value[0]}>
         {value[0]}:<ul>{listParams(value[1])}</ul>
       </li>
     );
