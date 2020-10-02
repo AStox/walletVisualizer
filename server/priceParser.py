@@ -19,8 +19,8 @@ with open(in_data) as file:
     f = contents.split("\n")
     for i in [j * 13 for j in range(0, int(len(f) / 13), 1)]:
         line = [val for val in f[i : i + 13] if val != "\t"]
-        line[0] = datetime.datetime.strptime(line[0], "%b %d, %Y").timestamp()
-        # print(line)
+        line[0] = int(datetime.datetime.strptime(line[0], "%b %d, %Y").timestamp())
+        out_json[line[0]] = {token: line[4]}
 
 with open("prices.json", "w") as out_file:
     json.dump(out_json, out_file)
