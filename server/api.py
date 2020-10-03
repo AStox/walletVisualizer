@@ -2,8 +2,9 @@ import requests
 import os
 import time
 import datetime
-from flask import Flask
 import json
+from flask import Flask
+from functools import reduce
 from web3.auto.infura import w3
 from uniswap import Uniswap
 from eth_abi import decode_single, decode_abi
@@ -38,9 +39,6 @@ def get_token_balance(my_address, token_name, block="latest"):
     contract_address = w3.toChecksumAddress(contracts["address"][token_name])
     contract = w3.eth.contract(contract_address, abi=contract_abi)
     balance = contract.functions.balanceOf(my_address).call()
-    # int r0 = contract.functions.price0CumulativeLast().call()
-    # print(r0)
-    print(balance)
     return
 
 
@@ -233,17 +231,6 @@ def get_transactions(wallet):
 
 def fill_out_dates(transactions):
     fill_dates = []
-    print(
-        (int(transactions[2]["timeStamp"]) - int(transactions[0]["timeStamp"]))
-        / (60 * 60 * 24)
-    )
-    print(transactions[1]["timeStamp"])
-    print(
-        int(
-            (int(transactions[1]["timeStamp"]) - int(transactions[0]["timeStamp"]))
-            / (60 * 60 * 24)
-        )
-    )
     for a, tx in enumerate(transactions[0:-2]):
         for i in [
             j * 60 * 60 * 24 + int(transactions[a]["timeStamp"])
@@ -293,7 +280,11 @@ def fill_out_dates(transactions):
         token_prices = {}
         for key, value in transactions[-1]["values"].items():
             values[key] = 0
-            token_prices[key] = prices[str(round_down_datetime(i))].get(key)
+            token_prices[key] = (
+                prices.get(str(round_down_datetime(i))).get(key)
+                if prices.get(str(round_down_datetime(i)))
+                else 0
+            )
         fill_dates.append(
             {"timeStamp": i, "values": values, "prices": token_prices, "isError": 0}
         )
@@ -301,19 +292,11 @@ def fill_out_dates(transactions):
     for i in fill_dates:
         transactions.append(i)
     transactions.sort(key=sortTransactions)
+    reduce(balance_calc, transactions, {})
+    # thing(transactions)
+    # for tx in transactions:
+    #     print(tx["balances"])
     return transactions
-    # # print(
-    # #     datetime.datetime.fromtimestamp(
-    # #         datetime.datetime(*datetime.datetime.utcnow().timetuple()[:3])
-    # #     )
-    # # )
-    # # print(datetime.datetime(datetime.datetime.utcnow().date()).timestamp)
-    # print(datetime.datetime.utcnow().timestamp() % (60 * 60 * 24 * 1000))
-    # print(
-    #     datetime.datetime.utcnow().timestamp()
-    #     - datetime.datetime.utcnow().timestamp() % (60 * 60 * 24 * 1000)
-    # )
-    # for i in range(transactions[0], datetime.)
 
 
 def sortTransactions(e):
@@ -326,3 +309,53 @@ def round_down_datetime(timestamp):
             *datetime.datetime.fromtimestamp(int(timestamp)).timetuple()[:3]
         ).timestamp()
     )
+
+
+def balance_calc(balances, transaction):
+    for i, key in enumerate(transaction["values"]):
+        value = transaction["values"][key]
+        if int(transaction["isError"]) == 0:
+            balances[key] = (balances.get(key) or 0) + value
+    tempBalArrays = [
+        [key, balances[key], transaction["prices"]] for i, key in enumerate(balances)
+    ]
+    usd = reduce(balancesUSD, tempBalArrays, {})
+    print(usd)
+    transaction["balancesUSD"] = dict(usd)
+    transaction["balances"] = dict(balances)
+    return balances
+
+
+def balancesUSD(balances, pair):
+    print(pair)
+    print(pair[1])
+    print((pair[2].get(pair[0]) or 0))
+    balances[pair[0]] = (pair[1]) * float(pair[2].get(pair[0]) or 0.0)
+    return balances
+
+
+# def for_loop_balance_calc(transactions):
+#     for i, tx in enumerate(transactions):
+#         if i == 0:
+#             balances = dict()
+#         else:
+#             balances = transactions[i - 1]["balances"]
+#         tempBal = dict()
+#         for i, key in enumerate(tx["values"]):
+#             value = tx["values"][key]
+#             tempBal = balances
+#             if int(tx["isError"]) == 0:
+#                 tempBal[key] = (balances.get(key) or 0) + value
+#                 balances[key] = tempBal[key]
+#         tempBalArrays = [
+#             [key, value, transaction["prices"]] for value, key in enumerate(tempBal)
+#         ]
+#         usd = reduce(balancesUSD, tempBalArrays, {})
+
+#         newTrans = { *transaction, "balances": tempBal, "balancesUSD": usd }
+#         ret.append(newTrans)
+#         tx["balances"] = dict(balances)
+#         print(tx["timeStamp"])
+#         print("Current Balance: ", tx["balances"])
+#         if i != 0:
+#             print("Previous Balance: ", transactions[i - 1]["balances"])

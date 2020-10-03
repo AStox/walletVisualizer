@@ -25,6 +25,7 @@ const WalletGraph = ({
   showUSD,
 }: Props) => {
   // console.log(transactions);
+  console.log(showUSD);
   return (
     <div className="WalletGraph">
       <LineChart

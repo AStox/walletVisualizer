@@ -9,7 +9,7 @@ import { IoLogoUsd } from "react-icons/io";
 import { FaEthereum } from "react-icons/fa";
 
 import "./Main.sass";
-// import "react-toggle/style.css";
+import "react-toggle/style.css";
 
 const Main = () => {
   const targetRef = useRef();
@@ -18,7 +18,7 @@ const Main = () => {
   );
   const [transaction, setTransaction] = useState({});
   const [address, setAddress] = useState("");
-  const [showUSD, setShowUSD] = useState(false);
+  const [showUSD, setShowUSD] = useState(true);
 
   // useEffect(() => {
   //   // if (targetRef.current) {
@@ -40,9 +40,7 @@ const Main = () => {
     fetch(`/api/wallet/${address}`)
       .then((res) => res.json())
       .then((data) => {
-        setTransactions(
-          formatTransactions(data.transactions as Transaction[], address)
-        );
+        setTransactions(data.transactions);
         setAddress(address);
       });
   };
@@ -56,7 +54,7 @@ const Main = () => {
         <div className="toggle-container">
           <Toggle
             className={"custom-toggle"}
-            onChange={setShowUSD}
+            onChange={() => setShowUSD(!showUSD)}
             icons={{
               checked: <FaEthereum />,
               unchecked: <IoLogoUsd />,
@@ -79,35 +77,35 @@ const Main = () => {
   );
 };
 
-const formatTransactions = (transactions: Transaction[], wallet: string) => {
-  let ret = [] as Transaction[];
-  reduce(
-    transactions,
-    (balances, transaction) => {
-      let tempBal = {} as Values;
-      forEach(transaction.values, (value, key) => {
-        tempBal = { ...balances };
-        if (transaction.isError == 0) {
-          tempBal[key] = (balances[key] || 0) + value;
-          balances[key] = tempBal[key];
-        }
-      });
-      const usd = reduce(
-        tempBal,
-        (obj, value, key) => ({
-          ...obj,
-          [key]: value * transaction.prices[key],
-        }),
-        {}
-      );
-      const newTrans = { ...transaction, balances: tempBal, balancesUSD: usd };
-      ret.push(newTrans);
-      return balances;
-    },
-    {} as Values
-  );
-  // return sortBy(ret, "timeStamp");
-  return ret;
-};
+// const formatTransactions = (transactions: Transaction[]) => {
+//   let ret = [] as Transaction[];
+//   reduce(
+//     transactions,
+//     (balances, transaction) => {
+//       let tempBal = {} as Values;
+//       forEach(transaction.values, (value, key) => {
+//         tempBal = { ...balances };
+//         if (transaction.isError == 0) {
+//           tempBal[key] = (balances[key] || 0) + value;
+//           balances[key] = tempBal[key];
+//         }
+//       });
+//       const usd = reduce(
+//         tempBal,
+//         (obj, value, key) => ({
+//           ...obj,
+//           [key]: value * transaction.prices[key],
+//         }),
+//         {}
+//       );
+//       const newTrans = { ...transaction, balances: tempBal, balancesUSD: usd };
+//       ret.push(newTrans);
+//       return balances;
+//     },
+//     {} as Values
+//   );
+//   // return sortBy(ret, "timeStamp");
+//   return ret;
+// };
 
 export default Main;
