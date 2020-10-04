@@ -25,7 +25,7 @@ const WalletGraph = ({
   showUSD,
 }: Props) => {
   // console.log(transactions);
-  console.log(showUSD);
+  // console.log(showUSD);
   return (
     <div className="WalletGraph">
       <LineChart
@@ -44,7 +44,7 @@ const WalletGraph = ({
           stroke="#C6920C"
           strokeWidth="3"
         />
-        <Line
+        {/* <Line
           type="monotone"
           dataKey={showUSD ? "balancesUSD.UNI" : "balances.UNI"}
           stroke="#1DB6D4"
@@ -67,7 +67,7 @@ const WalletGraph = ({
           dataKey={showUSD ? "balancesUSD.PUD" : "balances.PUD"}
           stroke="#A959F1"
           strokeWidth="3"
-        />
+        /> */}
         <CartesianGrid stroke="#2B1820" vertical={false} />
         <XAxis
           dataKey="timeStamp"
