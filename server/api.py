@@ -51,64 +51,151 @@ def get_transactions(wallet):
     )
     transactions = response.json()["result"]
     for transaction in transactions:
+        transaction["values"] = {}
         transaction["prices"] = {}
-        deposit = transaction["to"].lower() == wallet
-        transaction["values"] = {
-            "ETH": float(w3.fromWei(int(transaction["value"]), "ether"))
-            * (1 if deposit else -1)
-        }
         transaction["prices"]["ETH"] = prices[
             str(round_down_datetime(transaction["timeStamp"]))
         ].get("ETH")
-        transaction["txCost"] = 0
-        if transaction["from"].lower() == wallet.lower():
-            transaction["txCost"] = float(
-                w3.fromWei(
-                    int(transaction["gasUsed"]) * int(transaction["gasPrice"]),
-                    "ether",
-                )
-            )
-        key = contracts["owner"].get(transaction["to"].lower())
-        address = transaction["from"].lower()
-        transaction["fromName"] = contracts["owner"].get(transaction["from"].lower())
-        transaction["toName"] = key
-        contract_abi = contracts["abi"].get(key)
-        # block = transaction["blockNumber"]
-        if contract_abi:
-            contract_address = w3.toChecksumAddress(contracts["address"][key])
-            contract = w3.eth.contract(contract_address, abi=contract_abi)
-            if len(transaction["input"]) > 4:
-                input = contract.decode_function_input(transaction["input"])
-                transaction["input"] = str(input)
-                func = input[0].fn_name
-                transaction["name"] = func
-                if func == "approve":
-                    transaction["values"]["ETH"] -= transaction["txCost"]
-                    transaction["prices"]["ETH"] = prices[
-                        str(round_down_datetime(transaction["timeStamp"]))
-                    ].get("ETH")
-                if func == "swapExactTokensForETH":
-                    transaction["value"] = input[1]["amountOutMin"]
-                    transaction["values"]["ETH"] += float(
-                        w3.fromWei(input[1]["amountOutMin"], "ether")
+        if int(transaction["isError"]) == 0:
+            deposit = transaction["to"].lower() == wallet
+            transaction["values"] = {
+                "ETH": float(w3.fromWei(int(transaction["value"]), "ether"))
+                * (1 if deposit else -1)
+            }
+            transaction["txCost"] = 0
+            if transaction["from"].lower() == wallet.lower():
+                transaction["txCost"] = float(
+                    w3.fromWei(
+                        int(transaction["gasUsed"]) * int(transaction["gasPrice"]),
+                        "ether",
                     )
-                    transaction["prices"]["ETH"] = prices[
-                        str(round_down_datetime(transaction["timeStamp"]))
-                    ].get("ETH")
-                if func == "swapETHForExactTokens":
-                    address = input[1]["path"][-1].lower()
-                    key = contracts["owner"].get(input[1]["path"][-1].lower())
-                    txHash = transaction["hash"]
-                    time.sleep(0.5)
-                    internalTx = requests.get(
-                        f"https://api.etherscan.io/api?module=account&action=txlistinternal&txhash={txHash}&apikey={etherscan_api_key}"
-                    ).json()["result"]
-                    for tx in internalTx:
-                        if tx["to"].lower() == wallet:
-                            transaction["values"]["ETH"] += (
-                                float(
+                )
+            key = contracts["owner"].get(transaction["to"].lower())
+            address = transaction["from"].lower()
+            transaction["fromName"] = contracts["owner"].get(
+                transaction["from"].lower()
+            )
+            transaction["toName"] = key
+            contract_abi = contracts["abi"].get(key)
+            # block = transaction["blockNumber"]
+            if contract_abi:
+                contract_address = w3.toChecksumAddress(contracts["address"][key])
+                contract = w3.eth.contract(contract_address, abi=contract_abi)
+                if len(transaction["input"]) > 4:
+                    input = contract.decode_function_input(transaction["input"])
+                    transaction["input"] = str(input)
+                    func = input[0].fn_name
+                    transaction["name"] = func
+                    if func == "approve":
+                        transaction["values"]["ETH"] -= transaction["txCost"]
+                        transaction["prices"]["ETH"] = prices[
+                            str(round_down_datetime(transaction["timeStamp"]))
+                        ].get("ETH")
+                    if func == "swapExactTokensForETH":
+                        transaction["value"] = input[1]["amountOutMin"]
+                        transaction["values"]["ETH"] += float(
+                            w3.fromWei(input[1]["amountOutMin"], "ether")
+                        )
+                        transaction["prices"]["ETH"] = prices[
+                            str(round_down_datetime(transaction["timeStamp"]))
+                        ].get("ETH")
+                    if func == "swapETHForExactTokens":
+                        address = input[1]["path"][-1].lower()
+                        key = contracts["owner"].get(input[1]["path"][-1].lower())
+                        txHash = transaction["hash"]
+                        time.sleep(0.5)
+                        internalTx = requests.get(
+                            f"https://api.etherscan.io/api?module=account&action=txlistinternal&txhash={txHash}&apikey={etherscan_api_key}"
+                        ).json()["result"]
+                        for tx in internalTx:
+                            if tx["to"].lower() == wallet:
+                                transaction["values"]["ETH"] += (
+                                    float(
+                                        w3.fromWei(
+                                            int(tx["value"]),
+                                            "ether",
+                                        )
+                                    )
+                                    - transaction["txCost"]
+                                )
+                                transaction["prices"]["ETH"] = prices[
+                                    str(round_down_datetime(transaction["timeStamp"]))
+                                ].get("ETH")
+
+                        transaction["values"][key] = (
+                            float(w3.fromWei(input[1]["amountOut"], "mwei"))
+                            if key == "USDT"
+                            else float(w3.fromWei(input[1]["amountOut"], "ether"))
+                        )
+                        transaction["prices"][key] = prices[
+                            str(round_down_datetime(transaction["timeStamp"]))
+                        ].get(key)
+                    if func == "swapExactETHForTokens":
+                        address = input[1]["path"][-1].lower()
+                        token = contracts["owner"].get(address)
+                        txHash = transaction["hash"]
+                        logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
+                        contract_abi = contracts["abi"][f"ETH/{token}"]
+                        contract_address = w3.toChecksumAddress(
+                            contracts["address"][f"ETH/{token}"]
+                        )
+                        contract = w3.eth.contract(contract_address, abi=contract_abi)
+                        if len(logs) > 0:
+                            transaction["values"][token] = float(
+                                w3.fromWei(
+                                    contract.events.Swap().processLog(logs[-1])["args"][
+                                        "amount0Out"
+                                    ],
+                                    "ether",
+                                )
+                            )
+                            transaction["prices"][token] = prices[
+                                str(round_down_datetime(transaction["timeStamp"]))
+                            ].get(token)
+                            transaction["values"]["ETH"] = (
+                                -float(
+                                    w3.fromWei(int(transaction["value"]), "ether"),
+                                )
+                                - transaction["txCost"]
+                            )
+                            transaction["prices"]["ETH"] = prices[
+                                str(round_down_datetime(transaction["timeStamp"]))
+                            ].get("ETH")
+
+                    if func == "addLiquidityETH":
+                        address = input[1]["token"].lower()
+                        token = contracts["owner"].get(address)
+                        if token:
+                            tokenContract = w3.eth.contract(
+                                w3.toChecksumAddress(
+                                    contracts["address"][f"ETH/{token}"]
+                                ),
+                                abi=contracts["abi"][f"ETH/{token}"],
+                            )
+                            transaction["values"][f"ETH/{token}"] = float(
+                                w3.fromWei(
+                                    tokenContract.functions.balanceOf(
+                                        w3.toChecksumAddress(wallet)
+                                    ).call(),
+                                    "ether",
+                                )
+                            )
+                            transaction["prices"][f"ETH/{token}"] = prices[
+                                str(round_down_datetime(transaction["timeStamp"]))
+                            ].get(f"ETH/{token}")
+                        pool = f"WETH/{token}"
+                        tokenContract = w3.eth.contract(
+                            w3.toChecksumAddress(contracts["address"][pool]),
+                            abi=contracts["abi"][pool],
+                        )
+                        logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
+                        if len(logs) > 0:
+                            transaction["values"]["ETH"] = (
+                                -float(
                                     w3.fromWei(
-                                        int(tx["value"]),
+                                        tokenContract.events.Mint().processLog(
+                                            logs[-1]
+                                        )["args"]["amount1"],
                                         "ether",
                                     )
                                 )
@@ -117,115 +204,41 @@ def get_transactions(wallet):
                             transaction["prices"]["ETH"] = prices[
                                 str(round_down_datetime(transaction["timeStamp"]))
                             ].get("ETH")
-
-                    transaction["values"][key] = (
-                        float(w3.fromWei(input[1]["amountOut"], "mwei"))
-                        if key == "USDT"
-                        else float(w3.fromWei(input[1]["amountOut"], "ether"))
-                    )
-                    transaction["prices"][key] = prices[
-                        str(round_down_datetime(transaction["timeStamp"]))
-                    ].get(key)
-                if func == "swapExactETHForTokens":
-                    address = input[1]["path"][-1].lower()
-                    token = contracts["owner"].get(address)
-                    txHash = transaction["hash"]
-                    logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
-                    contract_abi = contracts["abi"][f"ETH/{token}"]
-                    contract_address = w3.toChecksumAddress(
-                        contracts["address"][f"ETH/{token}"]
-                    )
-                    contract = w3.eth.contract(contract_address, abi=contract_abi)
-                    if len(logs) > 0:
-                        transaction["values"][token] = float(
-                            w3.fromWei(
-                                contract.events.Swap().processLog(logs[-1])["args"][
-                                    "amount0Out"
-                                ],
-                                "ether",
-                            )
-                        )
-                        transaction["prices"][token] = prices[
-                            str(round_down_datetime(transaction["timeStamp"]))
-                        ].get(token)
-                        transaction["values"]["ETH"] = (
-                            -float(
-                                w3.fromWei(int(transaction["value"]), "ether"),
-                            )
-                            - transaction["txCost"]
-                        )
-                        transaction["prices"]["ETH"] = prices[
-                            str(round_down_datetime(transaction["timeStamp"]))
-                        ].get("ETH")
-
-                if func == "addLiquidityETH":
-                    address = input[1]["token"].lower()
-                    token = contracts["owner"].get(address)
-                    if token:
-                        tokenContract = w3.eth.contract(
-                            w3.toChecksumAddress(contracts["address"][f"ETH/{token}"]),
-                            abi=contracts["abi"][f"ETH/{token}"],
-                        )
-                        transaction["values"][f"ETH/{token}"] = float(
-                            w3.fromWei(
-                                tokenContract.functions.balanceOf(
-                                    w3.toChecksumAddress(wallet)
-                                ).call(),
-                                "ether",
-                            )
-                        )
-                        transaction["prices"][f"ETH/{token}"] = prices[
-                            str(round_down_datetime(transaction["timeStamp"]))
-                        ].get(f"ETH/{token}")
-                    pool = f"WETH/{token}"
-                    tokenContract = w3.eth.contract(
-                        w3.toChecksumAddress(contracts["address"][pool]),
-                        abi=contracts["abi"][pool],
-                    )
-                    logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
-                    if len(logs) > 0:
-                        transaction["values"]["ETH"] = (
-                            -float(
+                            if transaction["values"].get(token) == None:
+                                transaction["values"][token] = 0
+                            transaction["values"][token] -= float(
                                 w3.fromWei(
                                     tokenContract.events.Mint().processLog(logs[-1])[
                                         "args"
-                                    ]["amount1"],
+                                    ]["amount0"],
                                     "ether",
                                 )
                             )
-                            - transaction["txCost"]
-                        )
-                        transaction["prices"]["ETH"] = prices[
-                            str(round_down_datetime(transaction["timeStamp"]))
-                        ].get("ETH")
-                        if transaction["values"].get(token) == None:
-                            transaction["values"][token] = 0
-                        transaction["values"][token] -= float(
-                            w3.fromWei(
-                                tokenContract.events.Mint().processLog(logs[-1])[
-                                    "args"
-                                ]["amount0"],
-                                "ether",
-                            )
-                        )
-                        transaction["prices"][token] = prices[
-                            str(round_down_datetime(transaction["timeStamp"]))
-                        ].get(token)
+                            transaction["prices"][token] = prices[
+                                str(round_down_datetime(transaction["timeStamp"]))
+                            ].get(token)
 
-                if func == "stakeWithPermit":
-                    transaction["values"]["ETH"] = -transaction["txCost"]
-                if func == "deposit":
-                    print("deposit")
-                if func == "withdraw":
-                    print("withdraw")
-                if func == "removeLiquidityETHWithPermit":
-                    print("removeLiquidityETHWithPermit")
+                    if func == "stakeWithPermit":
+                        transaction["values"]["ETH"] = -transaction["txCost"]
+                    if func == "deposit":
+                        print("deposit")
+                    if func == "withdraw":
+                        print("withdraw")
+                    if func == "removeLiquidityETHWithPermit":
+                        print("removeLiquidityETHWithPermit")
         # transaction["values"][key] = get_token_balance(wallet, key)
         # print(transaction["values"])
 
         # for value, token in enumerate(transaction["values"]):
         #     transaction["prices"][token] = prices[transaction['timeStamp']].get(token)
+
     transactions = fill_out_dates(transactions)
+
+    reduce(balance_calc, transactions, {})
+
+    transactions = group_by_date(transactions)
+    # print(json.dumps(groups, indent=3))
+
     return {"transactions": transactions}
 
 
@@ -292,10 +305,7 @@ def fill_out_dates(transactions):
     for i in fill_dates:
         transactions.append(i)
     transactions.sort(key=sortTransactions)
-    reduce(balance_calc, transactions, {})
-    # thing(transactions)
-    # for tx in transactions:
-    #     print(tx["balances"])
+
     return transactions
 
 
@@ -314,48 +324,47 @@ def round_down_datetime(timestamp):
 def balance_calc(balances, transaction):
     for i, key in enumerate(transaction["values"]):
         value = transaction["values"][key]
-        if int(transaction["isError"]) == 0:
-            balances[key] = (balances.get(key) or 0) + value
+        balances[key] = (balances.get(key) or 0) + value
     tempBalArrays = [
         [key, balances[key], transaction["prices"]] for i, key in enumerate(balances)
     ]
     usd = reduce(balancesUSD, tempBalArrays, {})
-    print(usd)
     transaction["balancesUSD"] = dict(usd)
     transaction["balances"] = dict(balances)
     return balances
 
 
 def balancesUSD(balances, pair):
-    print(pair)
-    print(pair[1])
-    print((pair[2].get(pair[0]) or 0))
     balances[pair[0]] = (pair[1]) * float(pair[2].get(pair[0]) or 0.0)
     return balances
 
 
-# def for_loop_balance_calc(transactions):
-#     for i, tx in enumerate(transactions):
-#         if i == 0:
-#             balances = dict()
-#         else:
-#             balances = transactions[i - 1]["balances"]
-#         tempBal = dict()
-#         for i, key in enumerate(tx["values"]):
-#             value = tx["values"][key]
-#             tempBal = balances
-#             if int(tx["isError"]) == 0:
-#                 tempBal[key] = (balances.get(key) or 0) + value
-#                 balances[key] = tempBal[key]
-#         tempBalArrays = [
-#             [key, value, transaction["prices"]] for value, key in enumerate(tempBal)
-#         ]
-#         usd = reduce(balancesUSD, tempBalArrays, {})
+def group_by_date(transactions):
+    grouped_tx = {}
+    for tx in transactions:
+        timestamp = str(round_down_datetime(tx["timeStamp"]))
+        if grouped_tx.get(timestamp):
+            grouped_tx[timestamp]["transactions"].append(tx)
+        else:
+            grouped_tx[timestamp] = {"transactions": [tx]}
 
-#         newTrans = { *transaction, "balances": tempBal, "balancesUSD": usd }
-#         ret.append(newTrans)
-#         tx["balances"] = dict(balances)
-#         print(tx["timeStamp"])
-#         print("Current Balance: ", tx["balances"])
-#         if i != 0:
-#             print("Previous Balance: ", transactions[i - 1]["balances"])
+    grouped_array = []
+    for i, timestamp in enumerate(grouped_tx):
+        grouped_tx[timestamp]["prices"] = prices.get(timestamp) or {}
+        grouped_tx[timestamp]["timeStamp"] = timestamp
+        grouped_tx[timestamp]["values"] = reduce(
+            sum_values, grouped_tx[timestamp]["transactions"], {}
+        )
+        grouped_array.append(grouped_tx[timestamp])
+
+    reduce(balance_calc, grouped_array, {})
+
+    return grouped_array
+
+
+def sum_values(sum, tx):
+    values = sum
+    for i, key in enumerate(tx["values"]):
+        if int(tx["isError"]) == 0:
+            values[key] = (sum.get(key) or 0) + tx["values"][key]
+    return dict(values)
