@@ -6,8 +6,6 @@ from dateutil.parser import parse
 in_data = sys.argv[1]
 token = sys.argv[2]
 
-# print(token)
-# print(datetime.datetime.strptime("Oct 1, 2020", "%b %d, %Y").timestamp())
 out_json = {}
 with open("prices.json") as json_file:
     out_json = json.load(json_file)

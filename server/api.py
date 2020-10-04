@@ -236,7 +236,7 @@ def get_transactions(wallet):
 
     reduce(balance_calc, transactions, {})
 
-    transactions = group_by_date(transactions)
+    # transactions = group_by_date(transactions)
     # print(json.dumps(groups, indent=3))
 
     return {"transactions": transactions}
