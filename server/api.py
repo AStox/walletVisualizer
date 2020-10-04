@@ -226,6 +226,7 @@ def get_transactions(wallet):
                         print("withdraw")
                     if func == "removeLiquidityETHWithPermit":
                         print("removeLiquidityETHWithPermit")
+
         # transaction["values"][key] = get_token_balance(wallet, key)
         # print(transaction["values"])
 
@@ -325,12 +326,17 @@ def balance_calc(balances, transaction):
     for i, key in enumerate(transaction["values"]):
         value = transaction["values"][key]
         balances[key] = (balances.get(key) or 0) + value
+    transaction["balances"] = dict(balances)
+    for token in transaction["balances"]:
+        transaction["prices"][token] = (
+            prices[str(round_down_datetime(transaction["timeStamp"]))].get(token) or 0
+        )
     tempBalArrays = [
         [key, balances[key], transaction["prices"]] for i, key in enumerate(balances)
     ]
+    print(tempBalArrays)
     usd = reduce(balancesUSD, tempBalArrays, {})
     transaction["balancesUSD"] = dict(usd)
-    transaction["balances"] = dict(balances)
     return balances
 
 
