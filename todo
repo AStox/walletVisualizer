@@ -1,11 +1,11 @@
 First:
 ✅ Add token prices
-▶️  Update visuals to cumulative area graph
 ✅ Verify ethereum balances for every transaction
+✅ Fix toggle styling
 ▶️  Verify token balances for every transaction
+▶️  Update visuals to cumulative area graph
 ▶️  Automatically get token prices each day
 ▶️  Automatically detect new tokens and grab or (prompt user to grab) contract address, abi, and price history
-▶️  Fix toggle styling
 
 Liquidity Pools:
 ▶️  Determine rewards. Get percentage staked from contract, compare original amount in with current pool amounts

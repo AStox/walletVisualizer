@@ -48,18 +48,22 @@ const Main = () => {
   return (
     <div className="Main" data-testid="Main">
       <div className="flex-container">
-        <div className="input-container">
-          <AddressInput onSubmit={onSubmit} />
+        <div className="input-flex-container">
+          <div className="input-container">
+            <AddressInput onSubmit={onSubmit} />
+          </div>
         </div>
-        <div className="toggle-container">
-          <Toggle
-            className={"custom-toggle"}
-            onChange={() => setShowUSD(!showUSD)}
-            icons={{
-              checked: <FaEthereum />,
-              unchecked: <IoLogoUsd />,
-            }}
-          />
+        <div className="toggle-flex-container">
+          <div className="toggle-container">
+            <Toggle
+              className={"custom-toggle"}
+              onChange={() => setShowUSD(!showUSD)}
+              icons={{
+                checked: <FaEthereum />,
+                unchecked: <IoLogoUsd />,
+              }}
+            />
+          </div>
         </div>
       </div>
       <div ref={targetRef}>

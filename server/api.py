@@ -208,6 +208,16 @@ def get_transactions(wallet):
                         )
                         logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
                         if len(logs) > 0:
+                            if transaction["values"].get(f"ETH/{token}") == None:
+                                transaction["values"][f"ETH/{token}"] = 0
+                            transaction["values"][f"ETH/{token}"] = float(
+                                w3.fromWei(
+                                    tokenContract.events.Transfer().processLog(
+                                        logs[-3]
+                                    )["args"]["value"],
+                                    "ether",
+                                )
+                            )
                             if token == "USDT":
                                 transaction["values"]["ETH"] = (
                                     -float(

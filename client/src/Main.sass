@@ -11,30 +11,33 @@
     justify-content: center
     flex: 0
 
-    .input-container
-      flex: content
-      margin: 2rem 1rem
-      max-width: 50rem
+    .input-flex-container
+      flex: 2 0 auto
 
-    .toggle-container
-      flex: 0
-      margin: auto 0
+      .input-container
+        margin: 2rem auto
+        max-width: 54rem
 
-.custom-toggle.react-toggle--checked, .custom-toggle.react-toggle
-  .react-toggle-thumb
-    background-color: $accent
-    border: 0
-  .react-toggle-track
-    background-color: $accent1
-    &:hover
-      background-color: $accent1
+        input
+          border-radius: 15px
 
-.custom-toggle.react-toggle--checked, .custom-toggle.react-toggle
-  &:hover
-    .react-toggle-track
-      background-color: $accent1
-      &:hover
-        background-color: $accent1
+    .toggle-flex-container
+      flex: 1 2 auto
+      max-width: 10rem
+      .toggle-container
+        margin: 3rem auto
+        max-width: 4rem
 
-  &:active
-    
+.react-toggle-track
+  background-color: $accent1 !important
+
+.react-toggle-thumb
+  box-shadow: unset !important
+  background-color: $accent !important
+  border: 0 !important
+
+.react-toggle-track-check
+  margin-bottom: 10px !important
+
+.react-toggle-track-x
+  margin-bottom: 10px !important

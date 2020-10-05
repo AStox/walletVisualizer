@@ -44,6 +44,12 @@ const WalletGraph = ({
           stroke="#C6920C"
           strokeWidth="3"
         />
+        <Line
+          type="monotone"
+          dataKey={showUSD ? "balancesUSD.DAI" : "balances.DAI"}
+          stroke="#1DB6D4"
+          strokeWidth="3"
+        />
         {/* <Line
           type="monotone"
           dataKey={showUSD ? "balancesUSD.UNI" : "balances.UNI"}
