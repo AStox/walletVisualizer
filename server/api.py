@@ -218,6 +218,7 @@ def get_transactions(wallet):
                                     "ether",
                                 )
                             )
+                            print(dir(tokenContract.functions))
                             if token == "USDT":
                                 transaction["values"]["ETH"] = (
                                     -float(
@@ -413,6 +414,8 @@ def balance_calc(balances, transaction):
     for token in transaction["balances"]:
         transaction["prices"][token] = (
             prices[str(round_down_datetime(transaction["timeStamp"]))].get(token) or 0
+            if prices.get(str(round_down_datetime(transaction["timeStamp"])))
+            else 0
         )
     tempBalArrays = [
         [key, balances[key], transaction["prices"]] for i, key in enumerate(balances)
