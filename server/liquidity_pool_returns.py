@@ -1,4 +1,17 @@
 import requests
+import json
+import datetime
+from web3.auto.infura import w3
+
+prices = json.load(open("prices.json", "r"))
+
+
+def round_down_datetime(timestamp):
+    return int(
+        datetime.datetime(
+            *datetime.datetime.fromtimestamp(int(timestamp)).timetuple()[:3]
+        ).timestamp()
+    )
 
 
 def run_query(uri, query, statusCode, headers):
@@ -9,33 +22,62 @@ def run_query(uri, query, statusCode, headers):
         raise Exception(f"Unexpected status code returned: {request.status_code}")
 
 
-uri = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2"
-wallet = "0x225ef95fa90f4F7938A5b34234d14768cB4263dd".lower()
-query = """
-    {{
-        user(id: "{wallet}") {{
-            id
-            liquidityPositions {{
-                pair {{
-                    token0 {{
-                        name
-                    }}
-                    token1{{
-                        name
-                    }}
+def get_position(block, pair_address, token_balance):
+    uri = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2"
+    wallet = "0x225ef95fa90f4F7938A5b34234d14768cB4263dd".lower()
+    # block1 = 10895754
+    block_timestamp = w3.eth.getBlock(block).timestamp
+    day_id = int(block_timestamp / 86400)
+    # pair_id = "0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11".lower()
+    pair_day_id = f"{pair_address.lower()}-{day_id}"
+    print(pair_day_id)
+    block2 = 10896140
+    query = """
+        {{
+            pairDayData(id: "{pair_day_id}") {{
+                date
+                pairAddress
+                token0 {{
+                    symbol
                 }}
-                liquidityTokenBalance
+                token1 {{
+                    symbol
+                }}
+                reserve0
+                reserve1
+                totalSupply
+                reserveUSD
             }}
         }}
-    }}
-    """
-query = query.format(wallet=wallet)
-print(query)
-statusCode = 200
-headers = {}
-results = run_query(uri, query, statusCode, headers)
-print(results)
+        """
+    query = query.format(wallet=wallet, pair_day_id=pair_day_id, block2=block2)
+    statusCode = 200
+    headers = {}
+    results = run_query(uri, query, statusCode, headers)
+    print(results)
+    token0 = (
+        "ETH"
+        if results["data"]["pairDayData"]["token0"]["symbol"] == "WETH"
+        else results["data"]["pairDayData"]["token0"]["symbol"]
+    )
+    token1 = (
+        "ETH"
+        if results["data"]["pairDayData"]["token1"]["symbol"] == "WETH"
+        else results["data"]["pairDayData"]["token1"]["symbol"]
+    )
+    return {
+        "pair": None,
+        "liquidityTokenBalance": token_balance,
+        "reserve0": results["data"]["pairDayData"]["reserve0"],
+        "reserve1": results["data"]["pairDayData"]["reserve1"],
+        "reserveUSD": results["data"]["pairDayData"]["reserveUSD"],
+        "liquidityTokenTotalSupply": results["data"]["pairDayData"]["totalSupply"],
+        "token0PriceUSD": prices[str(round_down_datetime(block_timestamp))][token0],
+        "token1PriceUSD": prices[str(round_down_datetime(block_timestamp))][token1],
+    }
 
+
+print(get_position(10895754, "0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11", 0))
 # interface Position {
 #   pair: any
 #   liquidityTokenBalance: number
