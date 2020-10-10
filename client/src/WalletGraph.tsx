@@ -50,13 +50,13 @@ const WalletGraph = ({
           stroke="#1DB6D4"
           strokeWidth="3"
         />
-        {/* <Line
+         <Line
           type="monotone"
-          dataKey={showUSD ? "balancesUSD.UNI" : "balances.UNI"}
+          dataKey={showUSD ? "balancesUSD.ETH/DAI" : "balances.ETH/DAI"}
           stroke="#1DB6D4"
           strokeWidth="3"
         />
-        <Line
+        {/*<Line
           type="monotone"
           dataKey={showUSD ? "balancesUSD.USDT" : "balances.USDT"}
           stroke="#E25635"

@@ -8,7 +8,7 @@ First:
 ▶️  Automatically detect new tokens and grab or (prompt user to grab) contract address, abi, and price history
 
 Liquidity Pools:
-▶️  Determine rewards. Get percentage staked from contract, compare original amount in with current pool amounts
+▶️  Determine rewards. Get percentage staked from contract, compare original amountIn with current pool amounts
    ▶ Unknowns: percentage stakes? Look at transaction and eth and token put in vs historical pool totals. Maybe a way to tell with the liquidity tokens
                 pool totals? current and historical
 ▶️  Show values of staked tokens had you held them with a dashed line
@@ -18,3 +18,4 @@ Liquidity Pools:
 ▶️  zoomable/pannable chart
 ▶️  add/edit/delete transactions
 ▶️  Add a principle line to graph. Line that shows the amount of your money invested over time
+▶️  Use websockets or something to send data to the client in packets instead of in one chunk
