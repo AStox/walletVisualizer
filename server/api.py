@@ -299,6 +299,8 @@ def get_transactions(wallet):
 
     transactions = fill_out_dates(transactions)
 
+    transactions = group_by_date(transactions)
+
     reduce(balance_calc, transactions, {})
 
     return {"transactions": transactions}
@@ -378,8 +380,9 @@ def balance_calc(balances, transaction):
     transaction["balances"] = dict(balances)
     for token in transaction["balances"]:
         transaction["prices"][token] = get_price(transaction["timeStamp"], token)
+    day = 0
     tempBalArrays = [
-        [key, balances[key], transaction["prices"], int(transaction["timeStamp"])]
+        [key, balances[key], transaction["prices"], transaction["timeStamp"]]
         for i, key in enumerate(balances)
     ]
     usd = reduce(balancesUSD, tempBalArrays, {})
@@ -393,14 +396,21 @@ def is_uniswap_pool(symbol):
 
 def balancesUSD(balances, balance_obj):
     if is_uniswap_pool(balance_obj[0]):
-        print(balance_obj[0])
+        # if balance["day"] != round_down_datetime(int(balance_obj[3])):
+        #     print(balance_obj[0])
+
+        # print(balance_obj[3])
+        # balance_obj[3] += 1
         returns = get_returns_windows(
             liquidity_positions[balance_obj[0]]["timestamp"],
             balance_obj[3],
             contracts["address"][f"W{balance_obj[0]}"],
             balance_obj[1],
         )
-        balances[balance_obj[0]] = (returns.get("netReturn") or 0) if returns else 0
+        balances[balance_obj[0]] = (returns.get("netValue") or 0) if returns else 0
+        balances[f"{balance_obj[0]}-hodl"] = (
+            (returns.get("hodlValue") or 0) if returns else 0
+        )
     else:
         balances[balance_obj[0]] = (balance_obj[1]) * float(
             balance_obj[2].get(balance_obj[0]) or 0.0
@@ -426,7 +436,7 @@ def group_by_date(transactions):
         )
         grouped_array.append(grouped_tx[timestamp])
 
-    reduce(balance_calc, grouped_array, {})
+    # reduce(balance_calc, grouped_array, {})
 
     return grouped_array
 

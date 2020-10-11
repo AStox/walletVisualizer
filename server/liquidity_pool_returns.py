@@ -5,19 +5,11 @@ import json
 import datetime
 import math
 from web3.auto.infura import w3
-from utils import get_price
+from utils import get_price, round_down_datetime
 
 prices = json.load(open("prices.json", "r"))
 
-ATTEMPTS = 2
-
-
-def round_down_datetime(timestamp):
-    return int(
-        datetime.datetime(
-            *datetime.datetime.fromtimestamp(int(timestamp)).timetuple()[:3]
-        ).timestamp()
-    )
+ATTEMPTS = 1
 
 
 def run_query(uri, query, statusCode, headers):
@@ -28,13 +20,29 @@ def run_query(uri, query, statusCode, headers):
         raise Exception(f"Unexpected status code returned: {request.status_code}")
 
 
-def get_position(timestamp, pair_address, token_balance):
+def get_positions(timestamp1, timestamp2, pair_address, token_balance):
     uri = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2"
-    day_id = int(timestamp / 86400)
-    pair_day_id = f"{pair_address.lower()}-{day_id}"
+    day_id1 = int(timestamp1 / 86400)
+    pair_day_id1 = f"{pair_address.lower()}-{day_id1}"
+    day_id2 = int(timestamp2 / 86400)
+    pair_day_id2 = f"{pair_address.lower()}-{day_id2}"
     query = """
         {{
-            pairDayData(id: "{pair_day_id}") {{
+            position1: pairDayData(id: "{pair_day_id1}") {{
+                date
+                pairAddress
+                token0 {{
+                    symbol
+                }}
+                token1 {{
+                    symbol
+                }}
+                reserve0
+                reserve1
+                totalSupply
+                reserveUSD
+            }}
+            position2: pairDayData(id: "{pair_day_id2}") {{
                 date
                 pairAddress
                 token0 {{
@@ -50,48 +58,58 @@ def get_position(timestamp, pair_address, token_balance):
             }}
         }}
         """
-    query = query.format(pair_day_id=pair_day_id)
+    query = query.format(pair_day_id1=pair_day_id1, pair_day_id2=pair_day_id2)
     statusCode = 200
     headers = {}
     attempt = 0
     results = run_query(uri, query, statusCode, headers)
     print(query)
-    print(pair_day_id)
-    while attempt <= ATTEMPTS and (
-        not results.get("data") or not results["data"].get("pairDayData")
+    print(results)
+    print("----------------")
+    if (
+        not results.get("data")
+        or not results["data"].get("position1")
+        or not results["data"].get("position2")
     ):
-        print(results)
-        print(attempt <= ATTEMPTS)
-        time.sleep(5 * attempt)
-        results = run_query(uri, query, statusCode, headers)
-        attempt += 1
-        print(f"!!!!!!!!!!ATTEMPT {attempt} !!!!!!!!!!")
-
-    if not results.get("data") or not results["data"].get("pairDayData"):
         return None
     token0 = (
         "ETH"
-        if results["data"]["pairDayData"]["token0"]["symbol"] == "WETH"
-        else results["data"]["pairDayData"]["token0"]["symbol"]
+        if results["data"]["position1"]["token0"]["symbol"] == "WETH"
+        else results["data"]["position1"]["token0"]["symbol"]
     )
     token1 = (
         "ETH"
-        if results["data"]["pairDayData"]["token1"]["symbol"] == "WETH"
-        else results["data"]["pairDayData"]["token1"]["symbol"]
+        if results["data"]["position1"]["token1"]["symbol"] == "WETH"
+        else results["data"]["position1"]["token1"]["symbol"]
     )
-    return {
-        "pair": None,
-        "timestamp": int(timestamp),
-        "liquidityTokenBalance": float(token_balance),
-        "reserve0": float(results["data"]["pairDayData"]["reserve0"]),
-        "reserve1": float(results["data"]["pairDayData"]["reserve1"]),
-        "reserveUSD": float(results["data"]["pairDayData"]["reserveUSD"]),
-        "liquidityTokenTotalSupply": float(
-            results["data"]["pairDayData"]["totalSupply"]
-        ),
-        "token0PriceUSD": get_price(timestamp, token0),
-        "token1PriceUSD": get_price(timestamp, token1),
-    }
+    return [
+        {
+            "pair": None,
+            "timestamp": int(timestamp1),
+            "liquidityTokenBalance": float(token_balance),
+            "reserve0": float(results["data"]["position1"]["reserve0"]),
+            "reserve1": float(results["data"]["position1"]["reserve1"]),
+            "reserveUSD": float(results["data"]["position1"]["reserveUSD"]),
+            "liquidityTokenTotalSupply": float(
+                results["data"]["position1"]["totalSupply"]
+            ),
+            "token0PriceUSD": get_price(timestamp1, token0),
+            "token1PriceUSD": get_price(timestamp1, token1),
+        },
+        {
+            "pair": None,
+            "timestamp": int(timestamp2),
+            "liquidityTokenBalance": float(token_balance),
+            "reserve0": float(results["data"]["position2"]["reserve0"]),
+            "reserve1": float(results["data"]["position2"]["reserve1"]),
+            "reserveUSD": float(results["data"]["position2"]["reserveUSD"]),
+            "liquidityTokenTotalSupply": float(
+                results["data"]["position2"]["totalSupply"]
+            ),
+            "token0PriceUSD": get_price(timestamp2, token0),
+            "token1PriceUSD": get_price(timestamp2, token1),
+        },
+    ]
 
 
 # interface Position {
@@ -174,6 +192,8 @@ def get_metric_for_position_window(positionT0, positionT1):
     netValueT1 = t1Ownership * positionT1["reserveUSD"]
 
     return {
+        "hodleValue": assetValueT1,
+        "netValue": netValueT1,
         "hodleReturn": assetValueT1 - assetValueT0,
         "netReturn": netValueT1 - netValueT0,
         "uniswapReturn": uniswap_return,
@@ -183,8 +203,9 @@ def get_metric_for_position_window(positionT0, positionT1):
 
 
 def get_returns_windows(timestamp1, timestamp2, pair_address, token_balance):
-    position1 = get_position(timestamp1, pair_address, token_balance)
-    position2 = get_position(timestamp2, pair_address, token_balance)
-    if not position1 or not position2:
+    positions = get_positions(
+        int(timestamp1), int(timestamp2), pair_address, token_balance
+    )
+    if not positions:
         return None
-    return get_metric_for_position_window(position1, position2)
+    return get_metric_for_position_window(positions[0], positions[1])
