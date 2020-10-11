@@ -299,7 +299,7 @@ def get_transactions(wallet):
 
     transactions = fill_out_dates(transactions)
 
-    transactions = group_by_date(transactions)
+    # transactions = group_by_date(transactions)
 
     reduce(balance_calc, transactions, {})
 
@@ -396,11 +396,7 @@ def is_uniswap_pool(symbol):
 
 def balancesUSD(balances, balance_obj):
     if is_uniswap_pool(balance_obj[0]):
-        # if balance["day"] != round_down_datetime(int(balance_obj[3])):
-        #     print(balance_obj[0])
-
-        # print(balance_obj[3])
-        # balance_obj[3] += 1
+        # returns = {}
         returns = get_returns_windows(
             liquidity_positions[balance_obj[0]]["timestamp"],
             balance_obj[3],

@@ -1,4 +1,5 @@
-import React, { Dispatch, MutableRefObject, SetStateAction } from "react";
+import { map } from "lodash";
+import React, { Dispatch, MutableRefObject, SetStateAction, useState } from "react";
 import {
   CartesianGrid,
   Line,
@@ -8,6 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import CustomTooltip from "./CustomTooltip";
+import LineFactory from "./LineFactory";
 
 import "./walletGraph.sass";
 
@@ -18,6 +20,10 @@ interface Props {
   showUSD: boolean;
 }
 
+
+
+
+
 const WalletGraph = ({
   targetRef,
   transactions,
@@ -26,6 +32,22 @@ const WalletGraph = ({
 }: Props) => {
   // console.log(transactions);
   // console.log(showUSD);
+
+  const [colorIndex, setColorIndex] = useState(0)
+
+  const chooseColor = () => {
+    const colors = [
+      "#C6920C",
+      "#1DB6D4",
+      '#E25635',
+      "#08A984",
+      "#A959F1"
+    ];
+    setColorIndex(colorIndex + 1);
+    return colors[colorIndex - 1];
+  }
+
+  
   return (
     <div className="WalletGraph">
       <LineChart
@@ -38,7 +60,8 @@ const WalletGraph = ({
             <CustomTooltip setTransaction={setTransaction} showUSD={showUSD} />
           }
         />
-        <Line
+        {LineFactory(transactions,showUSD, chooseColor )}
+        {/* <Line
           type="monotone"
           dataKey={showUSD ? "balancesUSD.ETH" : "balances.ETH"}
           stroke="#C6920C"
@@ -53,9 +76,9 @@ const WalletGraph = ({
          <Line
           type="monotone"
           dataKey={showUSD ? "balancesUSD.ETH/DAI" : "balances.ETH/DAI"}
-          stroke="#1DB6D4"
+          stroke="#E25635"
           strokeWidth="3"
-        />
+        /> */}
         {/*<Line
           type="monotone"
           dataKey={showUSD ? "balancesUSD.USDT" : "balances.USDT"}
