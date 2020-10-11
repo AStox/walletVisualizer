@@ -1,6 +1,7 @@
 import { map } from "lodash";
 import React, { Dispatch, MutableRefObject, SetStateAction, useState } from "react";
 import {
+  AreaChart,
   CartesianGrid,
   Line,
   LineChart,
@@ -9,7 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import CustomTooltip from "./CustomTooltip";
-import LineFactory from "./LineFactory";
+import LineFactory, { AreaFactory } from "./LineFactory";
 
 import "./walletGraph.sass";
 
@@ -50,7 +51,7 @@ const WalletGraph = ({
   
   return (
     <div className="WalletGraph">
-      <LineChart
+      <AreaChart
         width={targetRef.current ? targetRef.current.offsetWidth : 10}
         height={400}
         data={transactions}
@@ -60,43 +61,8 @@ const WalletGraph = ({
             <CustomTooltip setTransaction={setTransaction} showUSD={showUSD} />
           }
         />
-        {LineFactory(transactions,showUSD, chooseColor )}
-        {/* <Line
-          type="monotone"
-          dataKey={showUSD ? "balancesUSD.ETH" : "balances.ETH"}
-          stroke="#C6920C"
-          strokeWidth="3"
-        />
-        <Line
-          type="monotone"
-          dataKey={showUSD ? "balancesUSD.DAI" : "balances.DAI"}
-          stroke="#1DB6D4"
-          strokeWidth="3"
-        />
-         <Line
-          type="monotone"
-          dataKey={showUSD ? "balancesUSD.ETH/DAI" : "balances.ETH/DAI"}
-          stroke="#E25635"
-          strokeWidth="3"
-        /> */}
-        {/*<Line
-          type="monotone"
-          dataKey={showUSD ? "balancesUSD.USDT" : "balances.USDT"}
-          stroke="#E25635"
-          strokeWidth="3"
-        />
-        <Line
-          type="monotone"
-          dataKey={showUSD ? "balancesUSD.LINK" : "balances.LINK"}
-          stroke="#08A984"
-          strokeWidth="3"
-        />
-        <Line
-          type="monotone"
-          dataKey={showUSD ? "balancesUSD.PUD" : "balances.PUD"}
-          stroke="#A959F1"
-          strokeWidth="3"
-        /> */}
+        {/* {LineFactory(transactions,showUSD, chooseColor )} */}
+        {AreaFactory(transactions,showUSD, chooseColor )}
         <CartesianGrid stroke="#2B1820" vertical={false} />
         <XAxis
           dataKey="timeStamp"
@@ -112,7 +78,7 @@ const WalletGraph = ({
           mirror={true}
           tickMargin={150}
         />
-      </LineChart>
+      </AreaChart>
     </div>
   );
 };
