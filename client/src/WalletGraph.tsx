@@ -1,5 +1,10 @@
 import { map } from "lodash";
-import React, { Dispatch, MutableRefObject, SetStateAction, useState } from "react";
+import React, {
+  Dispatch,
+  MutableRefObject,
+  SetStateAction,
+  useState,
+} from "react";
 import {
   AreaChart,
   CartesianGrid,
@@ -21,10 +26,6 @@ interface Props {
   showUSD: boolean;
 }
 
-
-
-
-
 const WalletGraph = ({
   targetRef,
   transactions,
@@ -34,21 +35,14 @@ const WalletGraph = ({
   // console.log(transactions);
   // console.log(showUSD);
 
-  const [colorIndex, setColorIndex] = useState(0)
+  const [colorIndex, setColorIndex] = useState(0);
 
   const chooseColor = () => {
-    const colors = [
-      "#C6920C",
-      "#1DB6D4",
-      '#E25635',
-      "#08A984",
-      "#A959F1"
-    ];
+    const colors = ["#C6920C", "#1DB6D4", "#E25635", "#08A984", "#A959F1"];
     setColorIndex(colorIndex + 1);
     return colors[colorIndex - 1];
-  }
+  };
 
-  
   return (
     <div className="WalletGraph">
       <AreaChart
@@ -62,7 +56,7 @@ const WalletGraph = ({
           }
         />
         {/* {LineFactory(transactions,showUSD, chooseColor )} */}
-        {AreaFactory(transactions,showUSD, chooseColor )}
+        {AreaFactory(transactions, showUSD, chooseColor)}
         <CartesianGrid stroke="#2B1820" vertical={false} />
         <XAxis
           dataKey="timeStamp"

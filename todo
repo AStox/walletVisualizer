@@ -3,6 +3,7 @@ First:
 ✅ Verify ethereum balances for every transaction
 ✅ Fix toggle styling
 ✅ Update visuals to cumulative area graph
+▶️  Optimize data requests
 ▶️  Verify token balances for every transaction
 ▶️  Automatically get token prices each day
 ▶️  Automatically detect new tokens and grab or (prompt user to grab) contract address, abi, and price history

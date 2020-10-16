@@ -9,15 +9,13 @@ from utils import get_price, round_down_datetime
 
 prices = json.load(open("prices.json", "r"))
 
-ATTEMPTS = 1
-
 
 def run_query(uri, query, statusCode, headers):
     request = requests.post(uri, json={"query": query}, headers=headers)
     if request.status_code == statusCode:
         return request.json()
     else:
-        raise Exception(f"Unexpected status code returned: {request.status_code}")
+        raise Exception(request)
 
 
 def get_positions(timestamp1, timestamp2, pair_address, token_balance):
@@ -63,9 +61,6 @@ def get_positions(timestamp1, timestamp2, pair_address, token_balance):
     headers = {}
     attempt = 0
     results = run_query(uri, query, statusCode, headers)
-    print(query)
-    print(results)
-    print("----------------")
     if (
         not results.get("data")
         or not results["data"].get("position1")
@@ -209,3 +204,115 @@ def get_returns_windows(timestamp1, timestamp2, pair_address, token_balance):
     if not positions:
         return None
     return get_metric_for_position_window(positions[0], positions[1])
+
+def get_batched_query(timestamp, pair_address, index):
+    day_id1 = int(int(timestamp) / 86400)
+    pair_day_id1 = f"{pair_address.lower()}-{day_id1}"
+    new_query = """
+        
+            position{index}: pairDayData(id: "{pair_day_id1}") {{
+                date
+                pairAddress
+                token0 {{
+                    symbol
+                }}
+                token1 {{
+                    symbol
+                }}
+                reserve0
+                reserve1
+                totalSupply
+                reserveUSD
+            }}
+        """
+    new_query = new_query.format(pair_day_id1=pair_day_id1, index=index)
+    return new_query
+    
+
+def get_batched_positions(batched_data):
+    index = 0
+    index_map = {}
+    start_timestamps = []
+    token_balance = []
+    query = """
+        {
+        """
+    for i, timestamp in enumerate(batched_data):
+        symbol_data = batched_data[timestamp]
+        index_map[timestamp] = index_map.get(timestamp) or {}
+        for j, symbol in enumerate(symbol_data):
+            args = symbol_data[symbol]
+            index_map[timestamp][symbol] = index_map[timestamp].get(symbol) or {}
+            if not args[0] in start_timestamps:
+                index_map[timestamp][symbol]["start"] = index
+                query += (get_batched_query(args[0], args[2], index))
+                token_balance.append(args[3])
+                index += 1
+            else:
+                index_map[timestamp][symbol]["start"] = start_timestamps.index(args[0])
+            index_map[timestamp][symbol]["end"] = index
+            query += (get_batched_query(args[1], args[2],index))
+            token_balance.append(args[3])
+            index += 1
+    query += ("""
+        }
+        """)
+    statusCode = 200
+    headers = {}
+    uri = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2"
+    results = run_query(uri, query, statusCode, headers)
+    if not results.get("data"):
+        print(results)
+    if (
+        not results.get("data")
+        or not results["data"].get("position1")
+        or not results["data"].get("position2")
+    ):
+        return None
+    positions = {}
+    for ind, key in enumerate(results["data"]):
+        position = results["data"][key]
+        if not position:
+            positions[key] = None
+        else:
+            token0 = (
+                "ETH"
+                if position["token0"]["symbol"] == "WETH"
+                else position["token0"]["symbol"]
+            )
+            token1 = (
+                "ETH"
+                if position["token1"]["symbol"] == "WETH"
+                else position["token1"]["symbol"]
+            )
+            positions[key] = {
+                "pair": None,
+                "timestamp": int(position["date"]),
+                "liquidityTokenBalance": float(token_balance[ind]),
+                "reserve0": float(position["reserve0"]),
+                "reserve1": float(position["reserve1"]),
+                "reserveUSD": float(position["reserveUSD"]),
+                "liquidityTokenTotalSupply": float(
+                    position["totalSupply"]
+                ),
+                "token0PriceUSD": get_price(int(position["date"]), token0),
+                "token1PriceUSD": get_price(int(position["date"]), token1),
+            }
+    return [positions, index_map]
+
+def get_batched_returns(batched_data):
+    [positions, index_map] = get_batched_positions(batched_data);
+    batched_returns = {}
+    for _, timestamp in enumerate(index_map):
+        batched_returns[timestamp] = batched_returns.get("timestamp") or {}
+        for _, symbol in enumerate(index_map[timestamp]):
+            position0 = positions[f"position{index_map[timestamp][symbol]['start']}"]
+            position1 = positions[f"position{index_map[timestamp][symbol]['end']}"]
+            if position0 and position1:
+                batched_returns[timestamp][symbol] = get_metric_for_position_window(position0, position1)
+            else:
+                batched_returns[timestamp][symbol] = None
+    
+    return batched_returns
+
+

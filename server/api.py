@@ -7,7 +7,7 @@ import re
 from flask import Flask
 from functools import reduce
 from web3.auto.infura import w3
-from liquidity_pool_returns import get_returns_windows
+from liquidity_pool_returns import get_returns_windows, get_batched_returns
 from utils import get_price, round_down_datetime
 
 
@@ -303,8 +303,17 @@ def get_transactions(wallet):
 
     reduce(balance_calc, transactions, {})
 
+    liquidity_returns = get_batched_returns(liquidity_position_timestamps)
+    liquidity_returns_calculations(transactions, liquidity_returns)
+
     return {"transactions": transactions}
 
+def liquidity_returns_calculations(transactions, liquidity_returns):
+    for tx in transactions:
+        if liquidity_returns.get(tx["timeStamp"]):
+            for _, symbol in enumerate(liquidity_returns[tx["timeStamp"]]):
+                if liquidity_returns[tx["timeStamp"]][symbol]:
+                    tx["balancesUSD"][symbol] = liquidity_returns[tx["timeStamp"]][symbol]["netValue"]
 
 def fill_out_dates(transactions):
     fill_dates = []
@@ -393,28 +402,30 @@ def balance_calc(balances, transaction):
 def is_uniswap_pool(symbol):
     return re.search(r"/", symbol) is not None
 
-
+liquidity_position_timestamps = {}
+# liquidity_position_timestamps = {[datetime]: {[symbol]: [array of args for get_batched_returns]}}
 def balancesUSD(balances, balance_obj):
     if is_uniswap_pool(balance_obj[0]):
         # returns = {}
         if balance_obj[1] > 0.0000001:
-            returns = get_returns_windows(
-                liquidity_positions[balance_obj[0]]["timestamp"],
-                balance_obj[3],
-                contracts["address"][f"W{balance_obj[0]}"],
-                balance_obj[1],
-            )
-            balances[balance_obj[0]] = (returns.get("netValue") or 0) if returns else 0
-            balances[f"{balance_obj[0]}-hodl"] = (
-                (returns.get("hodlValue") or 0) if returns else 0
-            )
+            liquidity_position_timestamps[balance_obj[3]] = liquidity_position_timestamps.get(balance_obj[3]) or {}
+            liquidity_position_timestamps[balance_obj[3]][balance_obj[0]] = [liquidity_positions[balance_obj[0]]["timestamp"], balance_obj[3],contracts["address"][f"W{balance_obj[0]}"],balance_obj[1]]
+            # returns = get_returns_windows(
+            #     liquidity_positions[balance_obj[0]]["timestamp"],
+            #     balance_obj[3],
+            #     contracts["address"][f"W{balance_obj[0]}"],
+            #     balance_obj[1],
+            # )
+            # balances[balance_obj[0]] = (returns.get("netValue") or 0) if returns else 0
+            # balances[f"{balance_obj[0]}-hodl"] = (
+            #     (returns.get("hodlValue") or 0) if returns else 0
+            # )
     else:
         if balance_obj[1] > 0.00001:
             balances[balance_obj[0]] = (balance_obj[1]) * float(
                 balance_obj[2].get(balance_obj[0]) or 0.0
             )
     return balances
-
 
 def group_by_date(transactions):
     grouped_tx = {}
