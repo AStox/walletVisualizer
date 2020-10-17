@@ -205,12 +205,12 @@ def get_returns_windows(timestamp1, timestamp2, pair_address, token_balance):
         return None
     return get_metric_for_position_window(positions[0], positions[1])
 
-def get_batched_query(timestamp, pair_address, index):
+def get_batched_query(timestamp, pair_address, query_id):
     day_id1 = int(int(timestamp) / 86400)
     pair_day_id1 = f"{pair_address.lower()}-{day_id1}"
     new_query = """
         
-            position{index}: pairDayData(id: "{pair_day_id1}") {{
+            {query_id}: pairDayData(id: "{pair_day_id1}") {{
                 date
                 pairAddress
                 token0 {{
@@ -225,7 +225,7 @@ def get_batched_query(timestamp, pair_address, index):
                 reserveUSD
             }}
         """
-    new_query = new_query.format(pair_day_id1=pair_day_id1, index=index)
+    new_query = new_query.format(pair_day_id1=pair_day_id1, query_id=query_id)
     return new_query
     
 
@@ -233,7 +233,7 @@ def get_batched_positions(batched_data):
     index = 0
     index_map = {}
     start_timestamps = []
-    token_balance = []
+    token_balance = {}
     query = """
         {
         """
@@ -244,15 +244,17 @@ def get_batched_positions(batched_data):
             args = symbol_data[symbol]
             index_map[timestamp][symbol] = index_map[timestamp].get(symbol) or {}
             if not args[0] in start_timestamps:
+                query_id = f"position{index}"
                 index_map[timestamp][symbol]["start"] = index
-                query += (get_batched_query(args[0], args[2], index))
-                token_balance.append(args[3])
+                query += (get_batched_query(args[0], args[2], query_id))
+                token_balance[query_id] = (args[3])
                 index += 1
             else:
                 index_map[timestamp][symbol]["start"] = start_timestamps.index(args[0])
+            query_id = f"position{index}"
             index_map[timestamp][symbol]["end"] = index
-            query += (get_batched_query(args[1], args[2],index))
-            token_balance.append(args[3])
+            query += (get_batched_query(args[1], args[2],query_id))
+            token_balance[query_id] = (args[3])
             index += 1
     query += ("""
         }
@@ -263,17 +265,12 @@ def get_batched_positions(batched_data):
     results = run_query(uri, query, statusCode, headers)
     if not results.get("data"):
         print(results)
-    if (
-        not results.get("data")
-        or not results["data"].get("position1")
-        or not results["data"].get("position2")
-    ):
         return None
     positions = {}
-    for ind, key in enumerate(results["data"]):
-        position = results["data"][key]
+    for ind, query_id in enumerate(results["data"]):
+        position = results["data"][query_id]
         if not position:
-            positions[key] = None
+            positions[query_id] = None
         else:
             token0 = (
                 "ETH"
@@ -285,10 +282,10 @@ def get_batched_positions(batched_data):
                 if position["token1"]["symbol"] == "WETH"
                 else position["token1"]["symbol"]
             )
-            positions[key] = {
-                "pair": None,
+            positions[query_id] = {
+                "pair": f"{token0}/{token1}",
                 "timestamp": int(position["date"]),
-                "liquidityTokenBalance": float(token_balance[ind]),
+                "liquidityTokenBalance": float(token_balance[query_id]),
                 "reserve0": float(position["reserve0"]),
                 "reserve1": float(position["reserve1"]),
                 "reserveUSD": float(position["reserveUSD"]),
