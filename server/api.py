@@ -299,7 +299,7 @@ def get_transactions(wallet):
 
     transactions = fill_out_dates(transactions)
 
-    transactions = group_by_date(transactions)
+    # transactions = group_by_date(transactions)
 
     reduce(balance_calc, transactions, {})
 
@@ -377,10 +377,8 @@ def fill_out_dates(transactions):
 
     return transactions
 
-
 def sortTransactions(e):
     return int(e["timeStamp"])
-
 
 def balance_calc(balances, transaction):
     for i, key in enumerate(transaction["values"]):
@@ -398,12 +396,11 @@ def balance_calc(balances, transaction):
     transaction["balancesUSD"] = dict(usd)
     return balances
 
-
 def is_uniswap_pool(symbol):
     return re.search(r"/", symbol) is not None
 
 liquidity_position_timestamps = {}
-# liquidity_position_timestamps = {[datetime]: {[symbol]: [array of args for get_batched_returns]}}
+
 def balancesUSD(balances, balance_obj):
     if is_uniswap_pool(balance_obj[0]):
         # returns = {}
@@ -448,7 +445,6 @@ def group_by_date(transactions):
     # reduce(balance_calc, grouped_array, {})
 
     return grouped_array
-
 
 def sum_values(sum, tx):
     values = sum

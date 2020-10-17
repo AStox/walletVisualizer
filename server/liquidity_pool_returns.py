@@ -9,6 +9,7 @@ from utils import get_price, round_down_datetime
 
 prices = json.load(open("prices.json", "r"))
 
+BATCH_SIZE = 30
 
 def run_query(uri, query, statusCode, headers):
     request = requests.post(uri, json={"query": query}, headers=headers)
@@ -208,9 +209,7 @@ def get_returns_windows(timestamp1, timestamp2, pair_address, token_balance):
 def get_batched_query(timestamp, pair_address, query_id):
     day_id1 = int(int(timestamp) / 86400)
     pair_day_id1 = f"{pair_address.lower()}-{day_id1}"
-    new_query = """
-        
-            {query_id}: pairDayData(id: "{pair_day_id1}") {{
+    new_query = """{query_id}: pairDayData(id: "{pair_day_id1}") {{
                 date
                 pairAddress
                 token0 {{
@@ -224,13 +223,13 @@ def get_batched_query(timestamp, pair_address, query_id):
                 totalSupply
                 reserveUSD
             }}
-        """
+            """
     new_query = new_query.format(pair_day_id1=pair_day_id1, query_id=query_id)
     return new_query
     
 
-def get_batched_positions(batched_data):
-    index = 0
+def get_batched_positions(batched_data, index):
+    positions = {}
     index_map = {}
     start_timestamps = []
     token_balance = {}
@@ -257,8 +256,7 @@ def get_batched_positions(batched_data):
             token_balance[query_id] = (args[3])
             index += 1
     query += ("""
-        }
-        """)
+        }""")
     statusCode = 200
     headers = {}
     uri = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2"
@@ -266,7 +264,6 @@ def get_batched_positions(batched_data):
     if not results.get("data"):
         print(results)
         return None
-    positions = {}
     for ind, query_id in enumerate(results["data"]):
         position = results["data"][query_id]
         if not position:
@@ -295,10 +292,27 @@ def get_batched_positions(batched_data):
                 "token0PriceUSD": get_price(int(position["date"]), token0),
                 "token1PriceUSD": get_price(int(position["date"]), token1),
             }
-    return [positions, index_map]
+    return [positions, index_map, index]
 
 def get_batched_returns(batched_data):
-    [positions, index_map] = get_batched_positions(batched_data);
+    positions = {}
+    index_map = {}
+    index = 0
+    count = math.ceil(len(batched_data) / BATCH_SIZE)
+    keys = list(batched_data.keys())
+    for i in range(0, count):
+        if i == count-1:
+            batch = {}
+            for j in range(i*BATCH_SIZE, i*BATCH_SIZE + (len(batched_data) - i*BATCH_SIZE)):
+                batch[keys[j]] = batched_data[keys[j]]
+        else:    
+            batch = {}
+            for j in range(i*BATCH_SIZE, (i+1) * BATCH_SIZE):
+                batch[keys[j]] = batched_data[keys[j]]
+        [batched_positions, batched_index_map, new_index] = get_batched_positions(batch, index);
+        index = new_index
+        positions = {**positions, **batched_positions}
+        index_map = {**index_map, **batched_index_map}
     batched_returns = {}
     for _, timestamp in enumerate(index_map):
         batched_returns[timestamp] = batched_returns.get("timestamp") or {}

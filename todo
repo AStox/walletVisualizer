@@ -3,10 +3,12 @@ First:
 ✅ Verify ethereum balances for every transaction
 ✅ Fix toggle styling
 ✅ Update visuals to cumulative area graph
-▶️  Optimize data requests
+✅ Optimize data requests
+▶️  Automatically decrease batch size if subgraph returns 413
 ▶️  Verify token balances for every transaction
 ▶️  Automatically get token prices each day
 ▶️  Automatically detect new tokens and grab or (prompt user to grab) contract address, abi, and price history
+▶️  Improved tooltips. Show what colors correspond to what tokens and balance values
 
 Liquidity Pools:
 ✅ Determine rewards. Get percentage staked from contract, compare original amountIn with current pool amounts
