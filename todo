@@ -4,11 +4,12 @@ First:
 ✅ Fix toggle styling
 ✅ Update visuals to cumulative area graph
 ✅ Optimize data requests
+✅ Automatically get token prices each day
 ▶️  Automatically decrease batch size if subgraph returns 413
 ▶️  Verify token balances for every transaction
-▶️  Automatically get token prices each day
 ▶️  Automatically detect new tokens and grab or (prompt user to grab) contract address, abi, and price history
 ▶️  Improved tooltips. Show what colors correspond to what tokens and balance values
+▶️  Sort the graph data by symbol, so similar symbols (eg. DAI, ETH/DAI) show up next to each other
 
 Liquidity Pools:
 ✅ Determine rewards. Get percentage staked from contract, compare original amountIn with current pool amounts

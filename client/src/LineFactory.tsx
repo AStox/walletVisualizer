@@ -15,7 +15,7 @@ const LineFactory = (transactions, showUSD, chooseColor) => {
         type="monotone"
         dataKey={showUSD ? `balancesUSD.${key}` : `balances.${key}`}
         stroke={colors[index % colors.length]}
-        strokeWidth="3"
+        strokeWidth="0"
       />
     );
   });
