@@ -32,15 +32,9 @@ const WalletGraph = ({
   setTransaction,
   showUSD,
 }: Props) => {
-  // console.log(transactions);
-  // console.log(showUSD);
-
-  const [colorIndex, setColorIndex] = useState(0);
-
-  const chooseColor = () => {
+  const colorChooser = (index: number) => {
     const colors = ["#C6920C", "#1DB6D4", "#E25635", "#08A984", "#A959F1"];
-    setColorIndex(colorIndex + 1);
-    return colors[colorIndex - 1];
+    return colors[index % colors.length];
   };
 
   return (
@@ -52,11 +46,15 @@ const WalletGraph = ({
       >
         <Tooltip
           content={
-            <CustomTooltip setTransaction={setTransaction} showUSD={showUSD} />
+            <CustomTooltip
+              setTransaction={setTransaction}
+              showUSD={showUSD}
+              colorChooser={colorChooser}
+            />
           }
         />
         {/* {LineFactory(transactions,showUSD, chooseColor )} */}
-        {AreaFactory(transactions, showUSD, chooseColor)}
+        {AreaFactory(transactions, showUSD, colorChooser)}
         <CartesianGrid stroke="#2B1820" vertical={false} />
         <XAxis
           dataKey="timeStamp"

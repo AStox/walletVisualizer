@@ -5,11 +5,17 @@ First:
 ✅ Update visuals to cumulative area graph
 ✅ Optimize data requests
 ✅ Automatically get token prices each day
+▶️  Only update missing price info
 ▶️  Automatically decrease batch size if subgraph returns 413
 ▶️  Verify token balances for every transaction
 ▶️  Automatically detect new tokens and grab or (prompt user to grab) contract address, abi, and price history
-▶️  Improved tooltips. Show what colors correspond to what tokens and balance values
+▶️  Improved tooltips. 
+    ▶️  Show what colors correspond to what tokens and balance values
+    ▶️  Show Total balance
+    ▶️  Show percent change (24 hrs, 1 week)
 ▶️  Sort the graph data by symbol, so similar symbols (eg. DAI, ETH/DAI) show up next to each other
+▶️  Automatically detect and utilize token decimals
+
 
 Liquidity Pools:
 ✅ Determine rewards. Get percentage staked from contract, compare original amountIn with current pool amounts
