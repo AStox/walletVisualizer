@@ -1,4 +1,4 @@
-import { map } from "lodash";
+import { map, shuffle } from "lodash";
 import React, {
   Dispatch,
   MutableRefObject,
@@ -15,7 +15,7 @@ import {
   YAxis,
 } from "recharts";
 import CustomTooltip from "./CustomTooltip";
-import LineFactory, { AreaFactory } from "./LineFactory";
+import LineFactory, { AreaFactory, GradientFactory } from "./LineFactory";
 
 import "./walletGraph.sass";
 
@@ -32,10 +32,37 @@ const WalletGraph = ({
   setTransaction,
   showUSD,
 }: Props) => {
+  let colors = [
+    "#C6920C",
+    "#1DB6D4",
+    "#E25635",
+    "#08A984",
+    "#A959F1",
+    "#CBBE3B",
+    "#DAD6D6",
+    "#F7B538",
+    "#C9FBFF",
+    "#A1E8AF",
+    "#7FB069",
+    "#CC2936",
+    "#FF8811",
+    "#3C91E6",
+    "#CE4257",
+    "#A3C4BC",
+  ];
+  colors = shuffle(colors);
   const colorChooser = (index: number) => {
-    const colors = ["#C6920C", "#1DB6D4", "#E25635", "#08A984", "#A959F1"];
     return colors[index % colors.length];
   };
+
+  const symbolColorMap: { [key: string]: string } = {};
+  let index = 0;
+  if (transactions && transactions.length > 0) {
+    map(transactions[transactions.length - 1]["balances"], (_, key) => {
+      symbolColorMap[key] = colorChooser(index);
+      index += 1;
+    });
+  }
 
   return (
     <div className="WalletGraph">
@@ -44,17 +71,19 @@ const WalletGraph = ({
         height={400}
         data={transactions}
       >
+        {GradientFactory(transactions, symbolColorMap)}
+        {/* {LineFactory(transactions,showUSD, chooseColor )} */}
+        {AreaFactory(transactions, showUSD, symbolColorMap)}
         <Tooltip
           content={
             <CustomTooltip
               setTransaction={setTransaction}
               showUSD={showUSD}
-              colorChooser={colorChooser}
+              colorMap={symbolColorMap}
             />
           }
         />
-        {/* {LineFactory(transactions,showUSD, chooseColor )} */}
-        {AreaFactory(transactions, showUSD, colorChooser)}
+
         <CartesianGrid stroke="#2B1820" vertical={false} />
         <XAxis
           dataKey="timeStamp"

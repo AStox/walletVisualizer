@@ -1,16 +1,9 @@
-import { spawn } from "child_process";
 import { map, reduce } from "lodash";
-import React, { Dispatch, SetStateAction, useEffect } from "react";
-import { Tooltip, TooltipProps } from "recharts";
+import React, { useEffect } from "react";
 import "./CustomTooltip.sass";
 import { listParams } from "./Utils";
 
-// interface Props extends TooltipProps {
-//   onChange: Dispatch<SetStateAction<{}>>;
-// }
-
 const CustomTooltip = (props) => {
-  let index = 0;
   useEffect(() => {
     if (props.active && props.payload && props.payload[0]) {
       props.setTransaction(props.payload[0].payload);
@@ -40,14 +33,12 @@ const CustomTooltip = (props) => {
             ? props.payload[0].payload.balancesUSD
             : props.payload[0].payload.balances,
           (val, key) => {
-            index += 1;
             return (
               <ColoredBalance
                 symbol={key}
                 val={val}
-                index={index}
                 showUSD={props.showUSD}
-                colorChooser={props.colorChooser}
+                color={props.colorMap[key]}
               />
             );
           }
@@ -59,17 +50,15 @@ const CustomTooltip = (props) => {
 const ColoredBalance = ({
   symbol,
   val,
-  index,
   showUSD,
-  colorChooser,
+  color,
 }: {
   symbol: string;
   val: number;
-  index: number;
   showUSD: boolean;
-  colorChooser(index: number): string;
+  color: string;
 }) => (
-  <div style={{ color: colorChooser(index) }}>
+  <div style={{ color }}>
     {symbol}: {showUSD && "$"}
     {val.toFixed(2)}
   </div>
