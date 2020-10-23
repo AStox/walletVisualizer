@@ -32,6 +32,148 @@ liquidity_positions = {}
 def main():
     return "hi"
 
+def liquidity_returns_calculations(transactions, liquidity_returns):
+    for tx in transactions:
+        if liquidity_returns.get(tx["timeStamp"]):
+            for _, symbol in enumerate(liquidity_returns[tx["timeStamp"]]):
+                if liquidity_returns[tx["timeStamp"]][symbol]:
+                    tx["balancesUSD"][symbol] = liquidity_returns[tx["timeStamp"]][symbol]["netValue"]
+
+def fill_out_dates(transactions):
+    fill_dates = []
+    for a, tx in enumerate(transactions[0:-2]):
+        for i in [
+            j * 60 * 60 * 24 + int(transactions[a]["timeStamp"])
+            for j in range(
+                0,
+                int(
+                    (
+                        int(transactions[a + 1]["timeStamp"])
+                        - int(transactions[a]["timeStamp"])
+                    )
+                    / (60 * 60 * 24)
+                ),
+            )
+        ]:
+            values = {}
+            token_prices = {}
+            for key, value in transactions[a]["values"].items():
+                values[key] = 0
+                token_prices[key] = get_price(i, key, prices)
+            fill_dates.append(
+                {
+                    "timeStamp": i,
+                    "values": values,
+                    "prices": token_prices,
+                    "isError": 0,
+                }
+            )
+
+    for i in [
+        j * 60 * 60 * 24 + int(transactions[-1]["timeStamp"])
+        for j in range(
+            0,
+            int(
+                datetime.datetime(*datetime.datetime.utcnow().timetuple()[:3]).timestamp()
+                / (60 * 60 * 24)
+                - int(transactions[-1]["timeStamp"]) / (60 * 60 * 24)
+            )
+        )
+    ]:
+        values = {}
+        token_prices = {}
+        for key, value in transactions[-1]["values"].items():
+            values[key] = 0
+            token_prices[key] = get_price(i, key, prices)
+        fill_dates.append(
+            {"timeStamp": i, "values": values, "prices": token_prices, "isError": 0}
+        )
+
+    now = int(datetime.datetime.now().timestamp())
+    values = {}
+    token_prices = {}
+    for key, value in transactions[-1]["values"].items():
+            values[key] = 0
+            token_prices[key] = get_price(now, key, prices)
+    fill_dates.append(
+        {"timeStamp": now, "values": values, "prices": token_prices, "isError": 0}
+    )
+    for i in fill_dates:
+        transactions.append(i)
+    transactions.sort(key=sortTransactions)
+
+    return transactions
+
+def sortTransactions(e):
+    return int(e["timeStamp"])
+
+def balance_calc(balances, transaction):
+    for i, key in enumerate(transaction["values"]):
+        value = transaction["values"][key]
+        balances[key] = (balances.get(key) or 0) + value
+    transaction["balances"] = dict(balances)
+    for token in transaction["balances"]:
+        transaction["prices"][token] = get_price(transaction["timeStamp"], token, prices)
+    day = 0
+    tempBalArrays = [
+        [key, balances[key], transaction["prices"], transaction["timeStamp"]]
+        for i, key in enumerate(balances)
+    ]
+    usd = reduce(balancesUSD, tempBalArrays, {})
+    transaction["balancesUSD"] = dict(usd)
+    return balances
+
+def is_uniswap_pool(symbol):
+    return re.search(r"/", symbol) is not None
+
+liquidity_position_timestamps = {}
+
+def balancesUSD(balances, balance_obj):
+    if is_uniswap_pool(balance_obj[0]):
+        if balance_obj[1] > 0.0000001:
+            liquidity_position_timestamps[balance_obj[3]] = liquidity_position_timestamps.get(balance_obj[3]) or {}
+            liquidity_position_timestamps[balance_obj[3]][balance_obj[0]] = [liquidity_positions[balance_obj[0]]["timestamp"], balance_obj[3],contracts["address"][f"W{balance_obj[0]}"],balance_obj[1]]
+    else:
+        if balance_obj[1] > 0.00001:
+            balances[balance_obj[0]] = (balance_obj[1]) * float(
+                balance_obj[2].get(balance_obj[0]) or 0.0
+            )
+    return balances
+
+def group_by_date(transactions):
+    grouped_tx = {}
+    for tx in transactions:
+        timestamp = str(round_down_datetime(tx["timeStamp"]))
+        if grouped_tx.get(timestamp):
+            grouped_tx[timestamp]["transactions"].append(tx)
+        else:
+            grouped_tx[timestamp] = {"transactions": [tx]}
+
+    grouped_array = []
+    for i, timestamp in enumerate(grouped_tx):
+        grouped_tx[timestamp]["prices"] = prices.get(timestamp) or {}
+        grouped_tx[timestamp]["timeStamp"] = timestamp
+        grouped_tx[timestamp]["values"] = reduce(
+            sum_values, grouped_tx[timestamp]["transactions"], {}
+        )
+        grouped_array.append(grouped_tx[timestamp])
+    grouped_array[-1]["timeStamp"] = transactions[-1]["timeStamp"]    #the last date is now and should not be rounded down
+
+    return grouped_array
+
+def sum_values(sum, tx):
+    values = sum
+    for i, key in enumerate(tx["values"]):
+        if int(tx["isError"]) == 0:
+            values[key] = (sum.get(key) or 0) + tx["values"][key]
+    return dict(values)
+
+def liquidity_returns_calculations(transactions, liquidity_returns):
+    for tx in transactions:
+        if liquidity_returns.get(tx["timeStamp"]):
+            for _, symbol in enumerate(liquidity_returns[tx["timeStamp"]]):
+                if liquidity_returns[tx["timeStamp"]][symbol]:
+                    tx["balancesUSD"][symbol] = liquidity_returns[tx["timeStamp"]][symbol]["netValue"]
 
 @app.route("/wallet/<wallet>")
 def get_transactions(wallet):
@@ -311,136 +453,3 @@ def get_transactions(wallet):
 
     return {"transactions": transactions}
 
-def liquidity_returns_calculations(transactions, liquidity_returns):
-    for tx in transactions:
-        if liquidity_returns.get(tx["timeStamp"]):
-            for _, symbol in enumerate(liquidity_returns[tx["timeStamp"]]):
-                if liquidity_returns[tx["timeStamp"]][symbol]:
-                    tx["balancesUSD"][symbol] = liquidity_returns[tx["timeStamp"]][symbol]["netValue"]
-
-def fill_out_dates(transactions):
-    fill_dates = []
-    for a, tx in enumerate(transactions[0:-2]):
-        for i in [
-            j * 60 * 60 * 24 + int(transactions[a]["timeStamp"])
-            for j in range(
-                0,
-                int(
-                    (
-                        int(transactions[a + 1]["timeStamp"])
-                        - int(transactions[a]["timeStamp"])
-                    )
-                    / (60 * 60 * 24)
-                ),
-            )
-        ]:
-            values = {}
-            token_prices = {}
-            for key, value in transactions[a]["values"].items():
-                values[key] = 0
-                token_prices[key] = get_price(i, key, prices)
-            fill_dates.append(
-                {
-                    "timeStamp": i,
-                    "values": values,
-                    "prices": token_prices,
-                    "isError": 0,
-                }
-            )
-
-    for i in [
-        j * 60 * 60 * 24 + int(transactions[-1]["timeStamp"])
-        for j in range(
-            0,
-            int(
-                (
-                    (
-                        datetime.datetime(
-                            *datetime.datetime.utcnow().timetuple()[:3]
-                        ).timestamp()
-                        / (60 * 60 * 24)
-                        - int(transactions[-1]["timeStamp"]) / (60 * 60 * 24)
-                    )
-                )
-            ),
-        )
-    ]:
-        values = {}
-        token_prices = {}
-        for key, value in transactions[-1]["values"].items():
-            values[key] = 0
-            token_prices[key] = get_price(i, key, prices)
-        fill_dates.append(
-            {"timeStamp": i, "values": values, "prices": token_prices, "isError": 0}
-        )
-
-    for i in fill_dates:
-        transactions.append(i)
-    transactions.sort(key=sortTransactions)
-
-    return transactions
-
-def sortTransactions(e):
-    return int(e["timeStamp"])
-
-def balance_calc(balances, transaction):
-    for i, key in enumerate(transaction["values"]):
-        value = transaction["values"][key]
-        balances[key] = (balances.get(key) or 0) + value
-    transaction["balances"] = dict(balances)
-    for token in transaction["balances"]:
-        transaction["prices"][token] = get_price(transaction["timeStamp"], token, prices)
-    day = 0
-    tempBalArrays = [
-        [key, balances[key], transaction["prices"], transaction["timeStamp"]]
-        for i, key in enumerate(balances)
-    ]
-    usd = reduce(balancesUSD, tempBalArrays, {})
-    transaction["balancesUSD"] = dict(usd)
-    return balances
-
-def is_uniswap_pool(symbol):
-    return re.search(r"/", symbol) is not None
-
-liquidity_position_timestamps = {}
-
-def balancesUSD(balances, balance_obj):
-    if is_uniswap_pool(balance_obj[0]):
-        if balance_obj[1] > 0.0000001:
-            liquidity_position_timestamps[balance_obj[3]] = liquidity_position_timestamps.get(balance_obj[3]) or {}
-            liquidity_position_timestamps[balance_obj[3]][balance_obj[0]] = [liquidity_positions[balance_obj[0]]["timestamp"], balance_obj[3],contracts["address"][f"W{balance_obj[0]}"],balance_obj[1]]
-    else:
-        if balance_obj[1] > 0.00001:
-            balances[balance_obj[0]] = (balance_obj[1]) * float(
-                balance_obj[2].get(balance_obj[0]) or 0.0
-            )
-    return balances
-
-def group_by_date(transactions):
-    grouped_tx = {}
-    for tx in transactions:
-        timestamp = str(round_down_datetime(tx["timeStamp"]))
-        if grouped_tx.get(timestamp):
-            grouped_tx[timestamp]["transactions"].append(tx)
-        else:
-            grouped_tx[timestamp] = {"transactions": [tx]}
-
-    grouped_array = []
-    for i, timestamp in enumerate(grouped_tx):
-        grouped_tx[timestamp]["prices"] = prices.get(timestamp) or {}
-        grouped_tx[timestamp]["timeStamp"] = timestamp
-        grouped_tx[timestamp]["values"] = reduce(
-            sum_values, grouped_tx[timestamp]["transactions"], {}
-        )
-        grouped_array.append(grouped_tx[timestamp])
-
-    # reduce(balance_calc, grouped_array, {})
-
-    return grouped_array
-
-def sum_values(sum, tx):
-    values = sum
-    for i, key in enumerate(tx["values"]):
-        if int(tx["isError"]) == 0:
-            values[key] = (sum.get(key) or 0) + tx["values"][key]
-    return dict(values)
