@@ -32,7 +32,7 @@ const WalletGraph = ({
   setTransaction,
   showUSD,
 }: Props) => {
-  let colors = [
+  let colorsArray = [
     "#C6920C",
     "#1DB6D4",
     "#E25635",
@@ -50,7 +50,8 @@ const WalletGraph = ({
     "#CE4257",
     "#A3C4BC",
   ];
-  colors = shuffle(colors);
+  // colors = shuffle(colors);
+  const [colors, setColors] = useState(shuffle(colorsArray));
   const colorChooser = (index: number) => {
     return colors[index % colors.length];
   };

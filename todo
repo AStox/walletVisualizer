@@ -6,7 +6,10 @@ First:
 ✅ Optimize data requests
 ✅ Automatically get token prices each day
 ✅ Add the current datetime timestamp as the final transaction to get up-to-date info
-▶️  Along with transactions, send a list of all tokens involved, then remove token balances that are less than 1 cent, to unclutter the graph
+▶️  Restructure return value to have all_tokens and total_balance
+    ▶️ replace places that use transaction[-1]["balances] to get a list of tokens used and
+      remove token balances that are less than 1 cent, to unclutter the graph
+    ▶️ calculate total balance per date and percent changes per date
 ▶️  Only update missing price info
 ▶️  Automatically decrease batch size if subgraph returns 413
 ▶️  Verify token balances for every transaction

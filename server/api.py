@@ -32,6 +32,19 @@ liquidity_positions = {}
 def main():
     return "hi"
 
+def percentChange(t1, t2):
+    return ((t1-t2)/t2) * 100
+
+def percent_change_calculations(transactions):
+    for i, tx in enumerate(transactions[1:]):
+        tx24h = transactions[i]
+        tx1w = transactions[i-6]
+        tx["_24hourChange"] = {}
+        tx["_1weekChange"] = {}
+        for _, symbol in enumerate(tx["balancesUSD"]):
+            tx["_24hourChange"][symbol] = percentChange(tx["balancesUSD"][symbol], tx24h["balancesUSD"][symbol]) if tx24h["balancesUSD"].get(symbol) else None
+            tx["_1weekChange"][symbol] = percentChange(tx["balancesUSD"][symbol], tx1w["balancesUSD"][symbol]) if tx1w["balancesUSD"].get(symbol) else None
+
 def liquidity_returns_calculations(transactions, liquidity_returns):
     for tx in transactions:
         if liquidity_returns.get(tx["timeStamp"]):
@@ -450,6 +463,7 @@ def get_transactions(wallet):
 
     liquidity_returns = get_batched_returns(liquidity_position_timestamps)
     liquidity_returns_calculations(transactions, liquidity_returns)
+    percent_change_calculations(transactions)
 
     return {"transactions": transactions}
 
