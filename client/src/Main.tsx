@@ -74,9 +74,7 @@ const Main = () => {
           showUSD={showUSD}
         />
       </div>
-      <div>
-        <ul>{listParams(transaction)}</ul>
-      </div>
+      <div>{/* <ul>{listParams(transaction)}</ul> */}</div>
     </div>
   );
 };
