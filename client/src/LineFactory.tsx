@@ -2,9 +2,9 @@ import { map } from "lodash";
 import React from "react";
 import { Area, Line } from "recharts";
 
-const LineFactory = (transactions, showUSD, colorMap) => {
+const LineFactory = (transactions, allTokens, showUSD, colorMap) => {
   if (!transactions) return null;
-  return map(transactions[transactions.length - 1]["balances"], (_, key) => {
+  return map(allTokens, (key) => {
     return (
       <Line
         key={key}
@@ -17,11 +17,11 @@ const LineFactory = (transactions, showUSD, colorMap) => {
   });
 };
 
-export const GradientFactory = (transactions, colorMap) => {
+export const GradientFactory = (transactions, allTokens, colorMap) => {
   if (!transactions) return null;
-  return map(transactions[transactions.length - 1]["balances"], (_, key) => {
+  return map(allTokens, (key) => {
     return (
-      <defs>
+      <defs key={key}>
         <linearGradient id={`color${key}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="5%" stopColor={colorMap[key]} stopOpacity={0.65} />
           <stop offset="95%" stopColor={colorMap[key]} stopOpacity={0} />
@@ -31,9 +31,9 @@ export const GradientFactory = (transactions, colorMap) => {
   });
 };
 
-export const AreaFactory = (transactions, showUSD, colorMap) => {
+export const AreaFactory = (transactions, allTokens, showUSD, colorMap) => {
   if (!transactions) return null;
-  return map(transactions[transactions.length - 1]["balances"], (_, key) => {
+  return map(allTokens, (key) => {
     return (
       <Area
         key={key}
@@ -45,6 +45,7 @@ export const AreaFactory = (transactions, showUSD, colorMap) => {
         strokeWidth="none"
         dot={false}
         activeDot={false}
+        connectNulls={false}
       />
     );
   });

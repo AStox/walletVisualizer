@@ -23,12 +23,14 @@ interface Props {
   targetRef: MutableRefObject<undefined>;
   setTransaction: Dispatch<SetStateAction<Transaction>>;
   transactions: Transaction[];
+  allTokens: string[];
   showUSD: boolean;
 }
 
 const WalletGraph = ({
   targetRef,
   transactions,
+  allTokens,
   setTransaction,
   showUSD,
 }: Props) => {
@@ -58,8 +60,8 @@ const WalletGraph = ({
 
   const symbolColorMap: { [key: string]: string } = {};
   let index = 0;
-  if (transactions && transactions.length > 0) {
-    map(transactions[transactions.length - 1]["balances"], (_, key) => {
+  if (allTokens && allTokens.length > 0) {
+    map(allTokens, (key) => {
       symbolColorMap[key] = colorChooser(index);
       index += 1;
     });
@@ -72,9 +74,9 @@ const WalletGraph = ({
         height={400}
         data={transactions}
       >
-        {GradientFactory(transactions, symbolColorMap)}
-        {/* {LineFactory(transactions,showUSD, chooseColor )} */}
-        {AreaFactory(transactions, showUSD, symbolColorMap)}
+        {GradientFactory(transactions, allTokens, symbolColorMap)}
+        {/* {LineFactory(transactions, allTokens, showUSD, chooseColor )} */}
+        {AreaFactory(transactions, allTokens, showUSD, symbolColorMap)}
         <Tooltip
           content={
             <CustomTooltip

@@ -27,6 +27,7 @@ contracts["owner"] = {value.lower(): key for key, value in contracts["address"].
 
 liquidity_positions = {}
 
+all_tokens = []
 
 @app.route("/")
 def main():
@@ -62,7 +63,6 @@ def total_balance_calculations(transactions):
         tx["total_balance_USD"] = reduce(
             sum, tx["balancesUSD"].values(), 0
         )
-
 
 def fill_out_dates(transactions):
     fill_dates = []
@@ -134,6 +134,8 @@ def sortTransactions(e):
 
 def balance_calc(balances, transaction):
     for i, key in enumerate(transaction["values"]):
+        if not key in all_tokens:
+            all_tokens.append(key)
         value = transaction["values"][key]
         balances[key] = (balances.get(key) or 0) + value
     transaction["balances"] = dict(balances)
@@ -160,9 +162,9 @@ def balancesUSD(balances, balance_obj):
             liquidity_position_timestamps[balance_obj[3]][balance_obj[0]] = [liquidity_positions[balance_obj[0]]["timestamp"], balance_obj[3],contracts["address"][f"W{balance_obj[0]}"],balance_obj[1]]
     else:
         if balance_obj[1] > 0.00001:
-            balances[balance_obj[0]] = (balance_obj[1]) * float(
-                balance_obj[2].get(balance_obj[0]) or 0.0
-            )
+            balance = (balance_obj[1]) * float(balance_obj[2].get(balance_obj[0]) or 0.0)
+            if balance >= 0.01:
+                balances[balance_obj[0]] = balance
     return balances
 
 def group_by_date(transactions):
@@ -478,5 +480,5 @@ def get_transactions(wallet):
     total_balance_calculations(transactions)
     percent_change_calculations(transactions)
 
-    return {"transactions": transactions}
+    return {"transactions": transactions, "all_tokens": all_tokens}
 

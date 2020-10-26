@@ -16,6 +16,7 @@ const Main = () => {
   const [transactions, setTransactions] = useState<Transaction[] | undefined>(
     undefined
   );
+  // const [allTokens, setAllTokens] = useState<string[] | undefined>(undefined);
   const [transaction, setTransaction] = useState({});
   const [address, setAddress] = useState("");
   const [showUSD, setShowUSD] = useState(true);
@@ -40,7 +41,7 @@ const Main = () => {
     fetch(`/api/wallet/${address}`)
       .then((res) => res.json())
       .then((data) => {
-        setTransactions(data.transactions);
+        setTransactions(data);
         setAddress(address);
       });
   };
@@ -70,7 +71,8 @@ const Main = () => {
         <WalletGraph
           targetRef={targetRef}
           setTransaction={setTransaction}
-          transactions={transactions}
+          transactions={transactions?.transactions}
+          allTokens={transactions?.all_tokens}
           showUSD={showUSD}
         />
       </div>
