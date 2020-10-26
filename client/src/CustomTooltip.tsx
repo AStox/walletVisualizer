@@ -53,15 +53,44 @@ const CustomTooltip = (props) => {
           <div className="date">
             {new Date(props.payload[0].payload.timeStamp * 1000).toDateString()}
           </div>
-          <div className="total-balance">
-            {`$${reduce(
-              props.payload[0].payload.balancesUSD,
-              (sum, bal) => bal + sum
-            ).toFixed(2)}`}
-          </div>
+          <table className="total-balance-table">
+            <tr>
+              <td className="total-balance" style={{ display: "inline" }}>
+                {`$${props.payload[0].payload.total_balance_USD.toFixed(2)}`}
+              </td>
+              <td className="percent-change">
+                <tr>
+                  <td
+                    style={{
+                      color:
+                        props.payload[0].payload._24hourChange.total > 0
+                          ? "green"
+                          : "red",
+                    }}
+                  >
+                    {props.payload[0].payload._24hourChange.total.toFixed(2)}%
+                  </td>
+                  <td
+                    style={{
+                      color:
+                        props.payload[0].payload._1weekChange.total > 0
+                          ? "green"
+                          : "red",
+                    }}
+                  >
+                    {props.payload[0].payload._1weekChange.total.toFixed(2)}%
+                  </td>
+                </tr>
+                <tr>
+                  <th>24hr</th>
+                  <th>1wk</th>
+                </tr>
+              </td>
+            </tr>
+          </table>
         </>
       )}
-      <table>
+      <table className="token-balance-table">
         <tr>
           <th>Token</th>
           <th>Value</th>

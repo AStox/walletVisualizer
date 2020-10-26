@@ -44,6 +44,8 @@ def percent_change_calculations(transactions):
         for _, symbol in enumerate(tx["balancesUSD"]):
             tx["_24hourChange"][symbol] = percentChange(tx["balancesUSD"][symbol], tx24h["balancesUSD"][symbol]) if tx24h["balancesUSD"].get(symbol) else None
             tx["_1weekChange"][symbol] = percentChange(tx["balancesUSD"][symbol], tx1w["balancesUSD"][symbol]) if tx1w["balancesUSD"].get(symbol) else None
+        tx["_24hourChange"]["total"] = percentChange(tx["total_balance_USD"], tx24h["total_balance_USD"]) if tx24h["total_balance_USD"] else None
+        tx["_1weekChange"]["total"] = percentChange(tx["total_balance_USD"], tx1w["total_balance_USD"]) if tx1w["total_balance_USD"] else None
 
 def liquidity_returns_calculations(transactions, liquidity_returns):
     for tx in transactions:
@@ -51,6 +53,16 @@ def liquidity_returns_calculations(transactions, liquidity_returns):
             for _, symbol in enumerate(liquidity_returns[tx["timeStamp"]]):
                 if liquidity_returns[tx["timeStamp"]][symbol]:
                     tx["balancesUSD"][symbol] = liquidity_returns[tx["timeStamp"]][symbol]["netValue"]
+
+def sum(total, bal):
+    return total + bal
+
+def total_balance_calculations(transactions):
+    for tx in transactions:
+        tx["total_balance_USD"] = reduce(
+            sum, tx["balancesUSD"].values(), 0
+        )
+
 
 def fill_out_dates(transactions):
     fill_dates = []
@@ -463,6 +475,7 @@ def get_transactions(wallet):
 
     liquidity_returns = get_batched_returns(liquidity_position_timestamps)
     liquidity_returns_calculations(transactions, liquidity_returns)
+    total_balance_calculations(transactions)
     percent_change_calculations(transactions)
 
     return {"transactions": transactions}

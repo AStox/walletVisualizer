@@ -2,16 +2,37 @@
 
 .CustomTooltip
     padding: 1rem 2rem
-    background-color: $light-background
+    background-color: $tooltip-background
     color: $accent
 
     .date
-        text-align: right
+        // text-align: right
+        margin-left: 0.9rem
+        line-height: 1rem
+        font-size: 0.8rem
 
-    .total-balance
-        font-size: 40px
-        font-weight: 600
-        margin: 1rem 0
+    .total-balance-table
+        vertical-align: top
+        width: 100%
+        // border-collapse: separate
+        border-spacing: 0.7rem 0
+        
+        .percent-change
+            text-align: center
+            line-height: 1rem
+            
+            th
+                font-size: 0.7rem
 
-    title
+
+        .total-balance
+            vertical-align: bottom
+            font-size: 40px
+            font-weight: 600
+            margin: 1rem 0
+
+    th
         text-align: left
+
+    .token-balance-table
+        border-spacing: 0.7rem 0
