@@ -25,14 +25,14 @@ const ColoredBalance = ({
       {showUSD && "$"}
       {val.toFixed(2)}
     </td>
-    {showUSD && (
-      <td style={{ color: _24hourChange > 0 ? "green" : "red" }}>
-        {_24hourChange ? _24hourChange.toFixed(2) : "--"}%
+    {showUSD && _24hourChange && (
+      <td style={{ color: _24hourChange[symbol] > 0 ? "green" : "red" }}>
+        {_24hourChange[symbol] ? _24hourChange[symbol].toFixed(2) : "--"}%
       </td>
     )}
-    {showUSD && (
-      <td style={{ color: _1weekChange > 0 ? "green" : "red" }}>
-        {_1weekChange ? _1weekChange.toFixed(2) : "--"}%
+    {showUSD && _1weekChange && (
+      <td style={{ color: _1weekChange[symbol] > 0 ? "green" : "red" }}>
+        {_1weekChange[symbol] ? _1weekChange[symbol].toFixed(2) : "--"}%
       </td>
     )}
     <td>${price.toFixed(2)}</td>
@@ -60,26 +60,30 @@ const CustomTooltip = (props) => {
               </td>
               <td className="percent-change">
                 <tr>
-                  <td
-                    style={{
-                      color:
-                        props.payload[0].payload._24hourChange.total > 0
-                          ? "green"
-                          : "red",
-                    }}
-                  >
-                    {props.payload[0].payload._24hourChange.total.toFixed(2)}%
-                  </td>
-                  <td
-                    style={{
-                      color:
-                        props.payload[0].payload._1weekChange.total > 0
-                          ? "green"
-                          : "red",
-                    }}
-                  >
-                    {props.payload[0].payload._1weekChange.total.toFixed(2)}%
-                  </td>
+                  {props.payload[0].payload._24hourChange && (
+                    <td
+                      style={{
+                        color:
+                          props.payload[0].payload._24hourChange.total > 0
+                            ? "green"
+                            : "red",
+                      }}
+                    >
+                      {props.payload[0].payload._24hourChange.total.toFixed(2)}%
+                    </td>
+                  )}
+                  {props.payload[0].payload._1weekChange && (
+                    <td
+                      style={{
+                        color:
+                          props.payload[0].payload._1weekChange.total > 0
+                            ? "green"
+                            : "red",
+                      }}
+                    >
+                      {props.payload[0].payload._1weekChange.total.toFixed(2)}%
+                    </td>
+                  )}
                 </tr>
                 <tr>
                   <th>24hr</th>
@@ -117,8 +121,8 @@ const CustomTooltip = (props) => {
                   val={val}
                   showUSD={props.showUSD}
                   color={props.colorMap[key]}
-                  _24hourChange={props.payload[0].payload._24hourChange[key]}
-                  _1weekChange={props.payload[0].payload._1weekChange[key]}
+                  _24hourChange={props.payload[0].payload._24hourChange}
+                  _1weekChange={props.payload[0].payload._1weekChange}
                   price={props.payload[0].payload.prices[key]}
                 />
               );
