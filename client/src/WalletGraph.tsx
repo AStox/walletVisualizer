@@ -66,7 +66,7 @@ const WalletGraph = ({
       index += 1;
     });
   }
-
+  console.log(transactions);
   return (
     <div className="WalletGraph">
       <AreaChart

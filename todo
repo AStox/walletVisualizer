@@ -6,12 +6,6 @@ First:
 ✅ Optimize data requests
 ✅ Automatically get token prices each day
 ✅ Add the current datetime timestamp as the final transaction to get up-to-date info
-▶️  Restructure return value to have all_tokens and total_balance
-    ▶️  replace places that use transaction[-1]["balances] to get a list of tokens used and
-       remove token balances that are less than 1 cent, to unclutter the graph
-    ✅ calculate total balance per date and percent changes per date
-▶️  Only update missing price info
-▶️  Verify token balances for every transaction
 ✅ Improved tooltips. 
     ✅ Show what colors correspond to what tokens and balance values
     ✅ Show Total balance
@@ -19,12 +13,17 @@ First:
     ✅  Show token price
     ✅  Make token order in tooltip the same as in the graph
     ✅  Make it looks pretty
-▶️  Sort the graph data by symbol, so similar symbols (eg. DAI, ETH/DAI) show up next to each other
+✅ Restructure return value to have all_tokens and total_balance
+    ❌ (ConnectNulls={false} is not supported for stacked area graphs in recharts) replace places that use transaction[-1]["balances] to get a list of tokens used and
+       remove token balances that are less than 1 cent, to unclutter the graph
+    ✅ calculate total balance per date and percent changes per date
+▶️  Fix bug with final transaction skipping a day until like 8pm. Seems like a timezones issue
+▶️  Only update missing price info and missing transactions
+▶️  Verify token balances for every transaction
 ▶️  Automatically detect and utilize token decimals
 ▶️  Automatically detect new tokens and grab or (prompt user to grab) contract address, abi, and price history
 ▶️  Automatically decrease batch size if subgraph returns 413
 ▶️  Refactor api.py
-
 
 Liquidity Pools:
 ✅ Determine rewards. Get percentage staked from contract, compare original amountIn with current pool amounts

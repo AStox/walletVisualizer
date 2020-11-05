@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 
-import { forEach, isObject, map, reduce, sortBy, toPairs } from "lodash";
 import AddressInput from "./AddressInput";
 import WalletGraph from "./WalletGraph";
 import { listParams } from "./Utils";
@@ -10,12 +9,18 @@ import { FaEthereum } from "react-icons/fa";
 
 import "./Main.sass";
 import "react-toggle/style.css";
+import { filter, forEach } from "lodash";
 
 const Main = () => {
   const targetRef = useRef();
-  const [transactions, setTransactions] = useState<Transaction[] | undefined>(
-    undefined
-  );
+  const [addressData, setAddressData] = useState<
+    | {
+        transactions: Transaction[];
+        all_tokens: string[];
+        last_block_number: number;
+      }
+    | undefined
+  >(undefined);
   // const [allTokens, setAllTokens] = useState<string[] | undefined>(undefined);
   const [transaction, setTransaction] = useState({});
   const [address, setAddress] = useState("");
@@ -36,12 +41,37 @@ const Main = () => {
 
   const onSubmit = (data: any) => {
     const address = data.address.toLowerCase();
-    // const address = "0x225ef95fa90f4F7938a5b34234d14768cb4263dd".toLowerCase();
+    const blockNumber = addressData?.last_block_number || 0;
+    const url = `/api/wallet/${address}?blockNumber=${blockNumber}`;
+    // url.search = new URLSearchParams(params).toString();
+    // console.log(url.toString());
 
-    fetch(`/api/wallet/${address}`)
+    fetch(url)
       .then((res) => res.json())
       .then((data) => {
-        setTransactions(data);
+        if (addressData) {
+          let transactions = [
+            ...addressData?.transactions,
+            ...data.transactions,
+          ];
+          transactions = [...new Set(transactions)];
+          const checkDupes = (tx2: Transaction) => {
+            forEach(transactions, (tx1: Transaction) => {
+              if (tx1.timeStamp === tx2.timeStamp) {
+                return false;
+              }
+            });
+            return true;
+          };
+          // transactions = filter(transactions, checkDupes);
+          setAddressData({
+            last_block_number: addressData?.last_block_number,
+            transactions: transactions,
+            all_tokens: [...addressData?.transactions, ...data.transactions],
+          });
+        } else {
+          setAddressData(data);
+        }
         setAddress(address);
       });
   };
@@ -71,8 +101,8 @@ const Main = () => {
         <WalletGraph
           targetRef={targetRef}
           setTransaction={setTransaction}
-          transactions={transactions?.transactions}
-          allTokens={transactions?.all_tokens}
+          transactions={addressData?.transactions}
+          allTokens={addressData?.all_tokens}
           showUSD={showUSD}
         />
       </div>
@@ -82,36 +112,5 @@ const Main = () => {
     </div>
   );
 };
-
-// const formatTransactions = (transactions: Transaction[]) => {
-//   let ret = [] as Transaction[];
-//   reduce(
-//     transactions,
-//     (balances, transaction) => {
-//       let tempBal = {} as Values;
-//       forEach(transaction.values, (value, key) => {
-//         tempBal = { ...balances };
-//         if (transaction.isError == 0) {
-//           tempBal[key] = (balances[key] || 0) + value;
-//           balances[key] = tempBal[key];
-//         }
-//       });
-//       const usd = reduce(
-//         tempBal,
-//         (obj, value, key) => ({
-//           ...obj,
-//           [key]: value * transaction.prices[key],
-//         }),
-//         {}
-//       );
-//       const newTrans = { ...transaction, balances: tempBal, balancesUSD: usd };
-//       ret.push(newTrans);
-//       return balances;
-//     },
-//     {} as Values
-//   );
-//   // return sortBy(ret, "timeStamp");
-//   return ret;
-// };
 
 export default Main;
