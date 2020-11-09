@@ -4,6 +4,7 @@ import time
 import datetime
 import json
 import re
+import functools
 from flask import Flask, request
 from functools import reduce
 from web3.auto.infura import w3
@@ -18,8 +19,8 @@ my_account = os.environ.get("MY_ACC")
 etherscan_api_key = os.environ.get("ETHERSCAN_API_KEY")
 
 prices = json.load(open("prices.json", "r"))
-# contracts = json.load(open("contracts.json", "r"))
-# contracts["owner"] = {value.lower(): key for key, value in contracts["address"].items()}
+old_contracts = json.load(open("contracts.json", "r"))
+# old_contracts["owner"] = {value.lower(): key for key, value in old_contracts["address"].items()}
 
 liquidity_positions = {}
 liquidity_position_timestamps = {}
@@ -129,7 +130,7 @@ def fill_out_dates(transactions):
 def sortTransactions(e):
     return int(e["timeStamp"])
 
-def balance_calc(balances, transaction):
+def balance_calc(balances, transaction, contracts):
     for i, key in enumerate(transaction["values"]):
         if not key in all_tokens:
             all_tokens.append(key)
@@ -138,28 +139,31 @@ def balance_calc(balances, transaction):
     transaction["balances"] = dict(balances)
     for token in transaction["balances"]:
         transaction["prices"][token] = get_price(transaction["timeStamp"], token, prices)
-    day = 0
     tempBalArrays = [
-        [key, balances[key], transaction["prices"], transaction["timeStamp"]]
+        [key, balances[key], transaction["prices"], transaction["timeStamp"], contracts["WETH" if key == "ETH" else key]["address"]]
         for i, key in enumerate(balances)
     ]
     usd = reduce(balancesUSD, tempBalArrays, {})
     transaction["balancesUSD"] = dict(usd)
+    # print(transaction["balances"])
     return balances
 
 def is_uniswap_pool(symbol):
     return re.search(r"/", symbol) is not None
 
 def balancesUSD(balances, balance_obj):
-    if is_uniswap_pool(balance_obj[0]):
-        if balance_obj[1] > 0.0000001:
-            liquidity_position_timestamps[balance_obj[3]] = liquidity_position_timestamps.get(balance_obj[3]) or {}
-            liquidity_position_timestamps[balance_obj[3]][balance_obj[0]] = [liquidity_positions[balance_obj[0]]["timestamp"], balance_obj[3],contracts[f"W{balance_obj[0]}"]["address"],balance_obj[1]]
+    [symbol, balance, prices_obj, timestamp, address] = balance_obj
+    if is_uniswap_pool(symbol):
+        # print(f"uniswap: {symbol}")
+        if balance > 0.0000001:
+            liquidity_position_timestamps[timestamp] = liquidity_position_timestamps.get(timestamp) or {}
+            liquidity_position_timestamps[timestamp][symbol] = [liquidity_positions[symbol]["timestamp"], timestamp, address, balance]
     else:
-        if balance_obj[1] > 0.00001:
-            balance = (balance_obj[1]) * float(balance_obj[2].get(balance_obj[0]) or 0.0)
-            if balance >= 0.01:
-                balances[balance_obj[0]] = balance
+        balance = (balance) * float(prices_obj.get(symbol) or 0.0)
+        print(f"regular: {symbol}, price: {float(prices_obj.get(symbol) or 0.0)}, balance: {balance}")
+        if balance >= 0.01:
+            balances[symbol] = balance
+    # print(balances)
     return balances
 
 def group_by_date(transactions):
@@ -173,7 +177,6 @@ def group_by_date(transactions):
 
     grouped_array = []
     for i, timestamp in enumerate(grouped_tx):
-        # print(grouped_tx[timestamp])
         grouped_tx[timestamp]["prices"] = prices.get(timestamp) or {}
         grouped_tx[timestamp]["timeStamp"] = timestamp
         grouped_tx[timestamp]["values"] = reduce(
@@ -187,7 +190,6 @@ def group_by_date(transactions):
 def sum_values(sum, tx):
     values = sum
     for i, key in enumerate(tx["values"]):
-        # print(tx)
         if int(tx["isError"]) == 0:
             values[key] = (sum.get(key) or 0) + tx["values"][key]
     return dict(values)
@@ -198,14 +200,8 @@ def liquidity_returns_calculations(transactions, liquidity_returns):
             for _, symbol in enumerate(liquidity_returns[tx["timeStamp"]]):
                 if liquidity_returns[tx["timeStamp"]][symbol]:
                     tx["balancesUSD"][symbol] = liquidity_returns[tx["timeStamp"]][symbol]["netValue"]
+                    # print(tx["balancesUSD"])
 
-# def check_existing_tx(new_tx):
-#     global addressData
-#     txs = addressData["transactions"]
-#     for tx in addressData["transactions"]:
-#         if tx["hash"] == new_tx:
-#             return False
-#     return True
 
 def collect_addresses(transactions):
     addresses = []
@@ -218,22 +214,32 @@ def collect_addresses(transactions):
             addresses.append(addr)
     return addresses
 
-def get_contracts_data(transactions):
+def get_contracts_data(transactions, old_contracts):
     contracts_data = {}
     addresses = collect_addresses(transactions)
+    
+    for key, value in old_contracts.items():
+        response = requests.get(
+            f'https://api.etherscan.io/api?module=contract&action=getabi&address={value["address"]}&apikey={etherscan_api_key}'
+        )
+        if int(response.json()["status"]) == 1:
+            abi = response.json()["result"]
+            name = key
+            symbol = key
+            contracts_data[symbol] = {"abi": abi, "address": value["address"], "name": name}
+
     for addr in addresses:
         response = requests.get(
             f'https://api.etherscan.io/api?module=contract&action=getabi&address={addr}&apikey={etherscan_api_key}'
         )
-        abi = response.json()["result"]
         if int(response.json()["status"]) == 1:
+            abi = response.json()["result"]
             addr = w3.toChecksumAddress(addr)
             contract = w3.eth.contract(addr, abi=abi)
             if 'name' in dir(contract.functions):
                 name = contract.functions.name().call()
                 symbol = contract.functions.symbol().call()
-                print(symbol)
-                contracts_data[symbol] = {"abi": abi, "address": addr, "name": name}
+                contracts_data[symbol] = { "abi": abi, "address": addr, "name": name}
     return contracts_data
         
 
@@ -246,7 +252,7 @@ def get_transactions(wallet):
         f"https://api.etherscan.io/api?module=account&action=txlist&address={wallet}&startblock={blockNumber}&endblock=99999999&sort=asc&apikey={etherscan_api_key}"
     )
     new_transactions = response.json()["result"]
-    contracts = get_contracts_data(new_transactions)
+    contracts = get_contracts_data(new_transactions, old_contracts)
     contracts["owner"] = {value["address"].lower(): key for key, value in contracts.items()}
 
     for transaction in new_transactions:
@@ -267,7 +273,7 @@ def get_transactions(wallet):
         transaction["fromName"] = contracts["owner"].get(transaction["from"].lower())
         transaction["toName"] = key
         contract_data = contracts.get(key)
-        contract_abi = contract_data["abi"] if contract_data else None
+        contract_abi = contract_data.get("abi") if contract_data else None
         if int(transaction["isError"]) == 0:
             transaction["values"] = {
                 "ETH": float(w3.fromWei(int(transaction["value"]), "ether"))
@@ -276,13 +282,11 @@ def get_transactions(wallet):
             if contract_abi:
                 contract_address = w3.toChecksumAddress(contracts[key]["address"])
                 contract = w3.eth.contract(contract_address, abi=contract_abi)
-                # print(key)
                 if len(transaction["input"]) > 4:
                     input = contract.decode_function_input(transaction["input"])
                     transaction["input"] = str(input)
                     func = input[0].fn_name
                     transaction["name"] = func
-                    # print(func)
                     if func == "approve":
                         transaction["values"]["ETH"] -= transaction["txCost"]
                     if func == "swapExactTokensForETH":
@@ -359,14 +363,15 @@ def get_transactions(wallet):
                         )
                     if func == "swapExactETHForTokens":
                         address = input[1]["path"][-1].lower()
-                        token = contracts["owner"].get(address) # TODO: fetch api https://github.com/forkdelta/coinmarketcap-ethtoken-db
+                        token = contracts['owner'].get(address)
+                        pool = f"ETH/{token}" # We assume the user is using Uniswap to swap by doing this. BAD
                         if not token:
                             raise Exception(f"No token data for {address}")
                         txHash = transaction["hash"]
                         logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
-                        contract_abi = contracts[f"ETH/{token}"]["abi"]
+                        contract_abi = contracts[pool]["abi"]
                         contract_address = w3.toChecksumAddress(
-                            contracts[f"ETH/{token}"]["address"]
+                            contracts[pool]["address"]
                         )
                         contract = w3.eth.contract(contract_address, abi=contract_abi)
                         if len(logs) > 0:
@@ -517,10 +522,9 @@ def get_transactions(wallet):
 
     new_transactions = group_by_date(new_transactions)
     global prices
-    prices = {**prices, **fetch_price_data(new_transactions)}
+    prices = {**prices, **fetch_price_data(new_transactions, contracts)}
 
-    reduce(balance_calc, new_transactions, {})
-
+    reduce(functools.partial(balance_calc, contracts=contracts), new_transactions, {})
     liquidity_returns = get_batched_returns(liquidity_position_timestamps)
     liquidity_returns_calculations(new_transactions, liquidity_returns)
     total_balance_calculations(new_transactions)
