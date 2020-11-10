@@ -1,6 +1,9 @@
 {
   "WETH": { "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2" },
-  "WBTC": { "address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599" },
+  "WBTC": {
+    "address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+    "decimals": 8
+  },
   "SHAKEPAY": { "address": "0x81b019a5c85adf9045140f689154faecdf20b0bf" },
   "BTCtoETH": { "address": "0xe7324d9ac91abcd37aed8e9c8846791ebfd16513" },
   "METAMASK": { "address": "0x225ef95fa90f4F7938A5b34234d14768cB4263dd" },
@@ -9,7 +12,10 @@
     "address": "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
   },
   "UNI": { "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984" },
-  "USDT": { "address": "0xdac17f958d2ee523a2206206994597c13d831ec7" },
+  "USDT": {
+    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "decimals": 6
+  },
   "PUD": { "address": "0xa49c8c60a5c0c2350012793d69dbb97f47ff4f76" },
   "DAI": { "address": "0x6b175474e89094c44da98b954eedeac495271d0f" },
   "LINK": { "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA" },
