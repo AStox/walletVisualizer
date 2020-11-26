@@ -62,25 +62,20 @@ def total_balance_calculations(transactions):
             sum, tx["balancesUSD"].values(), 0
         )
 
+def days_between_transactions(transaction1, transaction2):
+    return range(0, int((int(transaction2["timeStamp"]) - int(transaction1["timeStamp"]))/ (60 * 60 * 24)))
+
+def timestamps_between_transactions(transaction1, transaction2):
+    return [j * 60 * 60 * 24 + int(transaction1["timeStamp"]) for j in days_between_transactions(transaction1, transaction2)]
+
 def fill_out_dates(transactions):
     fill_dates = []
-    for a, tx in enumerate(transactions[0:-2]):
-        for i in [
-            j * 60 * 60 * 24 + int(transactions[a]["timeStamp"])
-            for j in range(
-                0,
-                int(
-                    (
-                        int(transactions[a + 1]["timeStamp"])
-                        - int(transactions[a]["timeStamp"])
-                    )
-                    / (60 * 60 * 24)
-                ),
-            )
-        ]:
+
+    for tx_index, tx in enumerate(transactions[0:-1]):
+        for i in timestamps_between_transactions(transactions[tx_index], transactions[tx_index + 1]):
             values = {}
             token_prices = {}
-            for key, value in transactions[a]["values"].items():
+            for key, value in transactions[tx_index]["values"].items():
                 values[key] = 0
                 token_prices[key] = get_price(i, key, prices)
             fill_dates.append(

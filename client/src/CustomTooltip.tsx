@@ -1,4 +1,4 @@
-import { map, reduce } from "lodash";
+import { isNumber, map, reduce } from "lodash";
 import React, { useEffect } from "react";
 import "./CustomTooltip.sass";
 
@@ -35,7 +35,7 @@ const ColoredBalance = ({
         {_1weekChange[symbol] ? _1weekChange[symbol].toFixed(2) : "--"}%
       </td>
     )}
-    <td>${price.toFixed(2)}</td>
+    <td>${isNumber(price) ? price.toFixed(2) : "--"}</td>
   </tr>
 );
 

@@ -9,7 +9,7 @@ import { FaEthereum } from "react-icons/fa";
 
 import "./Main.sass";
 import "react-toggle/style.css";
-import { filter, forEach } from "lodash";
+import { filter, forEach, includes } from "lodash";
 
 const Main = () => {
   const targetRef = useRef();
@@ -49,31 +49,66 @@ const Main = () => {
     fetch(url)
       .then((res) => res.json())
       .then((data) => {
-        if (addressData) {
-          let transactions = [
-            ...addressData?.transactions,
-            ...data.transactions,
-          ];
-          transactions = [...new Set(transactions)];
-          const checkDupes = (tx2: Transaction) => {
-            forEach(transactions, (tx1: Transaction) => {
+        const mergeArrays = (
+          transactions1: Transaction[],
+          transactions2: Transaction[]
+        ) => {
+          let dupesArray: number[] = [];
+          let returnArray: Transaction[] = [];
+          transactions1.pop();
+          forEach(transactions1, (tx1) => {
+            let dupe = false;
+            forEach(transactions2, (tx2: Transaction) => {
               if (tx1.timeStamp === tx2.timeStamp) {
-                return false;
+                dupesArray.push(transactions2.indexOf(tx2));
+                dupe = true;
+                // returnArray.push({
+                //   ...tx1,
+                //   ...tx2,
+                //   balances: { ...tx1.balances, ...tx2.balances },
+                //   balancesUSD: { ...tx1.balancesUSD, ...tx2.balancesUSD },
+                // });
               }
             });
-            return true;
-          };
-          // transactions = filter(transactions, checkDupes);
+            if (!dupe) {
+              returnArray.push(tx1);
+            }
+          });
+          const lastTx = returnArray[returnArray.length - 1];
+          // returnArray.pop();
+          forEach(transactions2, (tx) => {
+            if (!includes(dupesArray, transactions2.indexOf(tx))) {
+              returnArray.push({
+                ...lastTx,
+                ...tx,
+                balances: { ...lastTx.balances, ...tx.balances },
+                balancesUSD: { ...lastTx.balancesUSD, ...tx.balancesUSD },
+              });
+            }
+          });
+          return returnArray;
+        };
+
+        if (addressData) {
+          const transactions = mergeArrays(
+            addressData.transactions,
+            data.transactions
+          );
+
+          console.log("old: ", addressData.transactions);
+          console.log("new: ", transactions);
+
           setAddressData({
             last_block_number: addressData?.last_block_number,
             transactions: transactions,
-            all_tokens: [...addressData?.transactions, ...data.transactions],
+            all_tokens: [...addressData?.all_tokens, ...data.all_tokens],
           });
         } else {
           setAddressData(data);
         }
         setAddress(address);
       });
+    // console.log(addressData);
   };
 
   return (
