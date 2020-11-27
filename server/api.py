@@ -62,17 +62,17 @@ def total_balance_calculations(transactions):
             sum, tx["balancesUSD"].values(), 0
         )
 
-def days_between_transactions(transaction1, transaction2):
-    return range(0, int((int(transaction2["timeStamp"]) - int(transaction1["timeStamp"]))/ (60 * 60 * 24)))
+def days_between_transactions(timestamp1, timestamp2):
+    return range(0, int((int(timestamp2) - int(timestamp1))/ (60 * 60 * 24)))
 
-def timestamps_between_transactions(transaction1, transaction2):
-    return [j * 60 * 60 * 24 + int(transaction1["timeStamp"]) for j in days_between_transactions(transaction1, transaction2)]
+def timestamps_between_transactions(timestamp1, timestamp2):
+    return [j * 60 * 60 * 24 + int(timestamp1) for j in days_between_transactions(timestamp1, timestamp2)]
 
 def fill_out_dates(transactions):
     fill_dates = []
-
+    # Filling in dates up to the last transaction
     for tx_index, tx in enumerate(transactions[0:-1]):
-        for i in timestamps_between_transactions(transactions[tx_index], transactions[tx_index + 1]):
+        for i in timestamps_between_transactions(transactions[tx_index]["timeStamp"], transactions[tx_index + 1]["timeStamp"]):
             values = {}
             token_prices = {}
             for key, value in transactions[tx_index]["values"].items():
@@ -87,17 +87,10 @@ def fill_out_dates(transactions):
                 }
             )
 
-    for i in [
-        j * 60 * 60 * 24 + int(transactions[-1]["timeStamp"])
-        for j in range(
-            0,
-            int(
-                datetime.datetime(*datetime.datetime.utcnow().timetuple()[:3]).timestamp()
-                / (60 * 60 * 24)
-                - int(transactions[-1]["timeStamp"]) / (60 * 60 * 24)
-            )
-        )
-    ]:
+    # Filling in dates from the last transaction until now
+    now_timestamp = datetime.datetime(*datetime.datetime.utcnow().timetuple()[:3]).timestamp()
+    print("now1" , now_timestamp)
+    for i in timestamps_between_transactions(transactions[-1]["timeStamp"], now_timestamp):
         values = {}
         token_prices = {}
         for key, value in transactions[-1]["values"].items():
@@ -106,8 +99,10 @@ def fill_out_dates(transactions):
         fill_dates.append(
             {"timeStamp": i, "values": values, "prices": token_prices, "isError": 0}
         )
-
+    # FIXME: This is using local time, but tx timestamps are in UTC. This should changed to UTC
+    # and timezone conversion should be done later or on the frontend
     now = int(datetime.datetime.now().timestamp())
+    print("now2", now)
     values = {}
     token_prices = {}
     for key, value in transactions[-1]["values"].items():
@@ -239,6 +234,7 @@ def get_contracts_data(transactions, old_contracts):
 
 @app.route("/wallet/<wallet>")
 def get_transactions(wallet):
+    print("Request received...")
     wallet = wallet.lower()
     blockNumber = request.args.get("blockNumber")
     response = requests.get(
