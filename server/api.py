@@ -41,8 +41,8 @@ def percent_change_calculations(transactions):
         tx["_24hourChange"] = {}
         tx["_1weekChange"] = {}
         for _, symbol in enumerate(tx["balancesUSD"]):
-            tx["_24hourChange"][symbol] = percentChange(tx["balancesUSD"][symbol], tx24h["balancesUSD"][symbol]) if tx24h["balancesUSD"].get(symbol) else None
-            tx["_1weekChange"][symbol] = percentChange(tx["balancesUSD"][symbol], tx1w["balancesUSD"][symbol]) if tx1w["balancesUSD"].get(symbol) else None
+            tx["_24hourChange"][symbol] = percentChange(tx["prices"][symbol], tx24h["prices"][symbol]) if tx24h["prices"].get(symbol) else None
+            tx["_1weekChange"][symbol] = percentChange(tx["prices"][symbol], tx1w["prices"][symbol]) if tx1w["prices"].get(symbol) else None
         tx["_24hourChange"]["total"] = percentChange(tx["total_balance_USD"], tx24h["total_balance_USD"]) if tx24h["total_balance_USD"] else None
         tx["_1weekChange"]["total"] = percentChange(tx["total_balance_USD"], tx1w["total_balance_USD"]) if tx1w["total_balance_USD"] else None
 
