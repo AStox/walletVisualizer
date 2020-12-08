@@ -3,13 +3,15 @@ import os
 import time
 import datetime
 import json
-import re
 import functools
 from flask import Flask, request
 from functools import reduce
 from web3.auto.infura import w3
+
 from liquidity_pool_returns import get_returns_windows, get_batched_returns
 from price_fetcher import fetch_price_data
+from contracts import get_contracts_data
+from prices import PriceInfo, percent_change_calculations, liquidity_returns_calculations, total_balance_calculations, balance_calc
 from utils import get_price, round_down_datetime
 
 
@@ -18,49 +20,14 @@ app = Flask(__name__)
 my_account = os.environ.get("MY_ACC")
 etherscan_api_key = os.environ.get("ETHERSCAN_API_KEY")
 
-prices = json.load(open("prices.json", "r"))
 old_contracts = json.load(open("contracts.json", "r"))
 # old_contracts["owner"] = {value.lower(): key for key, value in old_contracts["address"].items()}
 
-liquidity_positions = {}
-liquidity_position_timestamps = {}
-all_tokens = []
 errors = []
 
 @app.route("/")
 def main():
     return "hi"
-
-def percentChange(t1, t2):
-    return ((t1-t2)/t2) * 100
-
-def percent_change_calculations(transactions):
-    for i, tx in enumerate(transactions[1:]):
-        tx24h = transactions[i]
-        tx1w = transactions[i-6]
-        tx["_24hourChange"] = {}
-        tx["_1weekChange"] = {}
-        for _, symbol in enumerate(tx["balancesUSD"]):
-            tx["_24hourChange"][symbol] = percentChange(tx["prices"][symbol], tx24h["prices"][symbol]) if tx24h["prices"].get(symbol) else None
-            tx["_1weekChange"][symbol] = percentChange(tx["prices"][symbol], tx1w["prices"][symbol]) if tx1w["prices"].get(symbol) else None
-        tx["_24hourChange"]["total"] = percentChange(tx["total_balance_USD"], tx24h["total_balance_USD"]) if tx24h["total_balance_USD"] else None
-        tx["_1weekChange"]["total"] = percentChange(tx["total_balance_USD"], tx1w["total_balance_USD"]) if tx1w["total_balance_USD"] else None
-
-def liquidity_returns_calculations(transactions, liquidity_returns):
-    for tx in transactions:
-        if liquidity_returns.get(tx["timeStamp"]):
-            for _, symbol in enumerate(liquidity_returns[tx["timeStamp"]]):
-                if liquidity_returns[tx["timeStamp"]][symbol]:
-                    tx["balancesUSD"][symbol] = liquidity_returns[tx["timeStamp"]][symbol]["netValue"]
-
-def sum(total, bal):
-    return total + bal
-
-def total_balance_calculations(transactions):
-    for tx in transactions:
-        tx["total_balance_USD"] = reduce(
-            sum, tx["balancesUSD"].values(), 0
-        )
 
 def days_between_transactions(timestamp1, timestamp2):
     return range(0, int((int(timestamp2) - int(timestamp1))/ (60 * 60 * 24)))
@@ -70,6 +37,7 @@ def timestamps_between_transactions(timestamp1, timestamp2):
 
 def fill_out_dates(transactions):
     fill_dates = []
+    prices = PriceInfo.getInstance().prices
     # Filling in dates up to the last transaction
     for tx_index, tx in enumerate(transactions[0:-1]):
         for i in timestamps_between_transactions(transactions[tx_index]["timeStamp"], transactions[tx_index + 1]["timeStamp"]):
@@ -77,7 +45,7 @@ def fill_out_dates(transactions):
             token_prices = {}
             for key, value in transactions[tx_index]["values"].items():
                 values[key] = 0
-                token_prices[key] = get_price(i, key, prices)
+                token_prices[key] = get_price(i, key, PriceInfo.getInstance().prices)
             fill_dates.append(
                 {
                     "timeStamp": i,
@@ -89,7 +57,6 @@ def fill_out_dates(transactions):
 
     # Filling in dates from the last transaction until now
     now_timestamp = datetime.datetime(*datetime.datetime.utcnow().timetuple()[:3]).timestamp()
-    print("now1" , now_timestamp)
     for i in timestamps_between_transactions(transactions[-1]["timeStamp"], now_timestamp):
         values = {}
         token_prices = {}
@@ -102,7 +69,6 @@ def fill_out_dates(transactions):
     # FIXME: This is using local time, but tx timestamps are in UTC. This should changed to UTC
     # and timezone conversion should be done later or on the frontend
     now = int(datetime.datetime.now().timestamp())
-    print("now2", now)
     values = {}
     token_prices = {}
     for key, value in transactions[-1]["values"].items():
@@ -120,39 +86,6 @@ def fill_out_dates(transactions):
 def sortTransactions(e):
     return int(e["timeStamp"])
 
-def balance_calc(balances, transaction, contracts):
-    for i, key in enumerate(transaction["values"]):
-        if not key in all_tokens:
-            all_tokens.append(key)
-        value = transaction["values"][key]
-        balances[key] = (balances.get(key) or 0) + value
-    transaction["balances"] = dict(balances)
-    for token in transaction["balances"]:
-        transaction["prices"][token] = get_price(transaction["timeStamp"], token, prices)
-    tempBalArrays = [
-        [key, balances[key], transaction["prices"], transaction["timeStamp"], contracts["WETH" if key == "ETH" else key]["address"]]
-        for i, key in enumerate(balances)
-    ]
-    usd = reduce(balancesUSD, tempBalArrays, {})
-    transaction["balancesUSD"] = dict(usd)
-    return balances
-
-def is_uniswap_pool(symbol):
-    return re.search(r"/", symbol) is not None
-
-def balancesUSD(balances, balance_obj):
-    [symbol, balance, prices_obj, timestamp, address] = balance_obj
-    if is_uniswap_pool(symbol):
-        if balance > 0.0000001:
-            liquidity_position_timestamps[timestamp] = liquidity_position_timestamps.get(timestamp) or {}
-            liquidity_position_timestamps[timestamp][symbol] = [liquidity_positions[symbol]["timestamp"], timestamp, address, balance]
-    else:
-        balance = (balance) * float(prices_obj.get(symbol) or 0.0)
-        # print(f"regular: {symbol}, price: {float(prices_obj.get(symbol) or 0.0)}, balance: {balance}")
-        if balance >= 0.01:
-            balances[symbol] = balance
-    return balances
-
 def group_by_date(transactions):
     grouped_tx = {}
     for tx in transactions:
@@ -164,7 +97,7 @@ def group_by_date(transactions):
 
     grouped_array = []
     for i, timestamp in enumerate(grouped_tx):
-        grouped_tx[timestamp]["prices"] = prices.get(timestamp) or {}
+        grouped_tx[timestamp]["prices"] = PriceInfo.getInstance().prices.get(timestamp) or {}
         grouped_tx[timestamp]["timeStamp"] = timestamp
         grouped_tx[timestamp]["values"] = reduce(
             sum_values, grouped_tx[timestamp]["transactions"], {}
@@ -181,60 +114,12 @@ def sum_values(sum, tx):
             values[key] = (sum.get(key) or 0) + tx["values"][key]
     return dict(values)
 
-def liquidity_returns_calculations(transactions, liquidity_returns):
-    for tx in transactions:
-        if liquidity_returns.get(tx["timeStamp"]):
-            for _, symbol in enumerate(liquidity_returns[tx["timeStamp"]]):
-                if liquidity_returns[tx["timeStamp"]][symbol]:
-                    tx["balancesUSD"][symbol] = liquidity_returns[tx["timeStamp"]][symbol]["netValue"]
-
-
-def collect_addresses(transactions):
-    addresses = []
-    for tx in transactions:
-        addr = tx["to"].lower()
-        if not addr in addresses:
-            addresses.append(addr)
-        addr = tx["from"].lower()
-        if not addr in addresses:
-            addresses.append(addr)
-    return addresses
-
-def get_contracts_data(transactions, old_contracts):
-    contracts_data = {}
-    addresses = collect_addresses(transactions)
-    
-    for key, value in old_contracts.items():
-        response = requests.get(
-            f'https://api.etherscan.io/api?module=contract&action=getabi&address={value["address"]}&apikey={etherscan_api_key}'
-        )
-        if int(response.json()["status"]) == 1:
-            abi = response.json()["result"]
-            name = key
-            symbol = key
-            contracts_data[symbol] = {"abi": abi, "address": value["address"], "name": name, "decimals": value.get("decimals") or 18}
-
-    for addr in addresses:
-        response = requests.get(
-            f'https://api.etherscan.io/api?module=contract&action=getabi&address={addr}&apikey={etherscan_api_key}'
-        )
-        if int(response.json()["status"]) == 1:
-            abi = response.json()["result"]
-            addr = w3.toChecksumAddress(addr)
-            contract = w3.eth.contract(addr, abi=abi)
-            if 'name' in dir(contract.functions):
-                # print(dir(contract.functions))
-                name = contract.functions.name().call()
-                symbol = contract.functions.symbol().call()
-                decimals = contract.functions.decimals().call()
-                contracts_data[symbol] = { "abi": abi, "address": addr, "name": name, "decimals": decimals}
-    return contracts_data
-        
-
 
 @app.route("/wallet/<wallet>")
 def get_transactions(wallet):
     print("Request received...")
+    price_info = PriceInfo()
+    price_info.prices = json.load(open("prices.json", "r"))
     wallet = wallet.lower()
     blockNumber = request.args.get("blockNumber")
     response = requests.get(
@@ -354,7 +239,7 @@ def get_transactions(wallet):
                             if transaction["values"].get(eth_pool) == None:
                                 transaction["values"][eth_pool] = 0
                             transaction["values"][eth_pool] = tokenContract.events.Transfer().processLog(logs[-3])["args"]["value"]/pow(10,contracts[eth_pool]["decimals"])
-                            liquidity_positions[eth_pool] = {
+                            price_info.liquidity_positions[eth_pool] = {
                                 "timestamp": int(transaction["timeStamp"]),
                                 "token_bal": transaction["values"][eth_pool],
                             }
@@ -400,14 +285,13 @@ def get_transactions(wallet):
     new_transactions = fill_out_dates(new_transactions)
 
     new_transactions = group_by_date(new_transactions)
-    global prices
-    prices = {**prices, **fetch_price_data(new_transactions, contracts)}
+    price_info.prices = {**price_info.prices, **fetch_price_data(new_transactions, contracts)}
 
     reduce(functools.partial(balance_calc, contracts=contracts), new_transactions, {})
-    liquidity_returns = get_batched_returns(liquidity_position_timestamps)
+    liquidity_returns = get_batched_returns(price_info.liquidity_position_timestamps)
     liquidity_returns_calculations(new_transactions, liquidity_returns)
     total_balance_calculations(new_transactions)
     percent_change_calculations(new_transactions)
-    addressData = {"transactions": new_transactions, "all_tokens": all_tokens, "last_block_number": last_block_number}
+    addressData = {"transactions": new_transactions, "all_tokens": price_info.all_tokens, "last_block_number": last_block_number}
     return addressData
 

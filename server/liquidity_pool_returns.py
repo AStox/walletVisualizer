@@ -6,11 +6,12 @@ import datetime
 import math
 from web3.auto.infura import w3
 from utils import get_price, round_down_datetime, run_query
-# prices = json.load(open("prices.json", "r"))
+from prices import PriceInfo
 
 BATCH_SIZE = 30
 
 def get_positions(timestamp1, timestamp2, pair_address, token_balance):
+    price_info = PriceInfo.getInstance()
     uri = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2"
     day_id1 = int(timestamp1 / 86400)
     pair_day_id1 = f"{pair_address.lower()}-{day_id1}"
@@ -80,8 +81,8 @@ def get_positions(timestamp1, timestamp2, pair_address, token_balance):
             "liquidityTokenTotalSupply": float(
                 results["data"]["position1"]["totalSupply"]
             ),
-            "token0PriceUSD": get_price(timestamp1, token0, prices),
-            "token1PriceUSD": get_price(timestamp1, token1, prices),
+            "token0PriceUSD": get_price(timestamp1, token0, price_info.prices),
+            "token1PriceUSD": get_price(timestamp1, token1, price_info.prices),
         },
         {
             "pair": None,
@@ -93,8 +94,8 @@ def get_positions(timestamp1, timestamp2, pair_address, token_balance):
             "liquidityTokenTotalSupply": float(
                 results["data"]["position2"]["totalSupply"]
             ),
-            "token0PriceUSD": get_price(timestamp2, token0, prices),
-            "token1PriceUSD": get_price(timestamp2, token1, prices),
+            "token0PriceUSD": get_price(timestamp2, token0, price_info.prices),
+            "token1PriceUSD": get_price(timestamp2, token1, price_info.prices),
         },
     ]
 
@@ -220,6 +221,7 @@ def get_batched_query(timestamp, pair_address, query_id):
     
 
 def get_batched_positions(batched_data, index):
+    price_info = PriceInfo.getInstance()
     positions = {}
     index_map = {}
     start_timestamps = []
@@ -255,7 +257,6 @@ def get_batched_positions(batched_data, index):
     if not results.get("data"):
         print(results)
         return None
-    from api import prices
     for ind, query_id in enumerate(results["data"]):
         position = results["data"][query_id]
         if not position:
@@ -281,8 +282,8 @@ def get_batched_positions(batched_data, index):
                 "liquidityTokenTotalSupply": float(
                     position["totalSupply"]
                 ),
-                "token0PriceUSD": get_price(int(position["date"]), token0, prices),
-                "token1PriceUSD": get_price(int(position["date"]), token1, prices),
+                "token0PriceUSD": get_price(int(position["date"]), token0, price_info.prices),
+                "token1PriceUSD": get_price(int(position["date"]), token1, price_info.prices),
             }
     return [positions, index_map, index]
 
