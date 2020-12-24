@@ -7,10 +7,23 @@
   "SHAKEPAY": { "address": "0x81b019a5c85adf9045140f689154faecdf20b0bf" },
   "BTCtoETH": { "address": "0xe7324d9ac91abcd37aed8e9c8846791ebfd16513" },
   "METAMASK": { "address": "0x225ef95fa90f4F7938A5b34234d14768cB4263dd" },
-  "MEW": { "address": "0x0d74c19b87cee6d9d4f843e2ddb5f8bc2dd42c08" },
+  "GEMINI": { "address": "0x2c942d438f8e4b7b49252e896ee4745ca6d96aea" },
+  "MEW": {
+    "address": [
+      "0x0d74c19b87cee6d9d4f843e2ddb5f8bc2dd42c08",
+      "0xa2948dcffa94ef110f880675f05b112bdf9750c2",
+      "0x90e577775a9f2130979a041d99a6e7af1835f79d",
+      "0xbd20672851a3b7588ad1c5b83027dcdd566b0d10",
+      "0x92104f9c660b85e9e35c2ec69a81809f3aa95b76",
+      "0xaecec7358bb34ee28942ca671aa7a182705f19b6",
+      "0xf72bf7668067ca892f6066a702cf2d19e78a7909",
+      "0x9bdfaa68548dfde712898bcd0f1ebd2225244224"
+    ]
+  },
   "UniswapPrivacyRouter": {
     "address": "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
   },
+  "UniswapFactory": { "address": "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f" },
   "UNI": { "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984" },
   "USDT": {
     "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
