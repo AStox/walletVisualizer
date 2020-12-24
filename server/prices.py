@@ -70,7 +70,7 @@ def balance_calc(balances, transaction, contracts):
     for token in transaction["balances"]:
         transaction["prices"][token] = get_price(transaction["timeStamp"], token, PriceInfo.getInstance().prices)
     tempBalArrays = [
-        [key, balances[key], transaction["prices"], transaction["timeStamp"], contracts["WETH" if key == "ETH" else key]["address"]]
+        [key, balances[key], transaction["prices"], transaction["timeStamp"], contracts["WETH" if key == "ETH" else key].address]
         for i, key in enumerate(balances)
     ]
     usd = reduce(balancesUSD, tempBalArrays, {})

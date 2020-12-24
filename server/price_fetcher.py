@@ -47,7 +47,7 @@ def get_batched_token_day_data(batched_data, index, contracts):
         index_map[timestamp] = index_map.get(timestamp) or {}
         for j, symbol in enumerate(symbol_data):
             index_map[timestamp][symbol] = index
-            address = contracts[symbol.replace('_','/')]["address"]
+            address = contracts[symbol.replace('_','/')].address
             query += (get_batched_query(timestamp, symbol, address))
             index += 1
     query += ("""

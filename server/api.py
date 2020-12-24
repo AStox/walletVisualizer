@@ -41,9 +41,10 @@ def get_transactions(wallet):
     contracts_info.populate_contract_data(new_transactions, old_contracts)
     contracts = contracts_info.contracts
 
-    print([key for key, value in contracts.items()])
+    
 
     for transaction in new_transactions:
+        print(f"processing transaction {transaction['hash']}")
         transaction["values"] = {}
         transaction["prices"] = {}
         transaction["txCost"] = 0
@@ -79,28 +80,23 @@ def get_transactions(wallet):
                     if func == "swapExactTokensForETH":
                         token1 = contracts["WETH"].address
                         token2 = input[1]["path"][0]
-                        contracts_info.get_contract(token2)
-                        token_abi = fetch_abi(token2)
-                        tokenContract = w3.eth.contract(
-                            w3.toChecksumAddress(token2),
-                            abi=token_abi
-                        )
-                        symbol = tokenContract.functions.symbol().call()
-                        poolContract = fetch_uniswap_pool_contract(token1, token2, contracts, name=f"ETH/{symbol}")
-                        poolDecimals = poolContract.functions.decimals().call()
+                        tokenContract = contracts_info.get_contract(token2)
+                        eth_pool = f"ETH/{tokenContract.symbol}"
+                        poolContract = fetch_uniswap_pool_contract(token1, token2, contracts, key=eth_pool)
+                        poolDecimals = poolContract.decimals
                         # TODO: DONT USE BALANCEOF HERE IT WON"T SCALE
-                        transaction["values"][f"ETH/{symbol}"] = float(
-                            tokenContract.functions.balanceOf(
+                        transaction["values"][eth_pool] = float(
+                            tokenContract.w3_contract.functions.balanceOf(
                                 w3.toChecksumAddress(wallet)
                             ).call()/pow(10, poolDecimals)
                         )
-                        pool = f"WETH/{symbol}"
+                        pool = f"WETH/{tokenContract.symbol}"
                         logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
                         if len(logs) > 0:
-                            transaction["values"]["ETH"] = poolContract.events.Swap().processLog(logs[-2])["args"]["amount1Out"]/pow(10,contracts["WETH"]["decimals"])- transaction["txCost"]
-                        if transaction["values"].get(symbol) == None:
-                            transaction["values"][symbol] = 0
-                        transaction["values"][symbol] = -poolContract.events.Swap().processLog(logs[-2])["args"]["amount0In"]/pow(10, poolDecimals)
+                            transaction["values"]["ETH"] = poolContract.w3_contract.events.Swap().processLog(logs[-2])["args"]["amount1Out"]/pow(10,contracts["WETH"].decimals)- transaction["txCost"]
+                        if transaction["values"].get(tokenContract.symbol) == None:
+                            transaction["values"][tokenContract.symbol] = 0
+                        transaction["values"][tokenContract.symbol] = -poolContract.w3_contract.events.Swap().processLog(logs[-2])["args"]["amount0In"]/pow(10, poolDecimals)
                     if func == "swapETHForExactTokens":
                         address = input[1]["path"][-1].lower()
                         key = contracts_info.get_contract(address=input[1]["path"][-1].lower()).symbol
@@ -112,49 +108,46 @@ def get_transactions(wallet):
                         for tx in internalTx:
                             if tx["to"].lower() == wallet:
                                 transaction["values"]["ETH"] += (
-                                            int(tx["value"])/pow(10,contracts["WETH"]["decimals"])
+                                            int(tx["value"])/pow(10,contracts["WETH"].decimals)
                                     - transaction["txCost"]
                                 )
 
                         transaction["values"][key] = (
-                                input[1]["amountOut"]/pow(10,contracts[key]["decimals"])
+                                input[1]["amountOut"]/pow(10,contracts[key].decimals)
                         )
                     if func == "swapExactETHForTokens":
-                        token1 = contracts["WETH"]["address"]
+                        token1 = contracts["WETH"].address
                         token2 = input[1]["path"][-1].lower()
-                        poolContract = fetch_uniswap_pool_contract(token1, token2, contracts)
-                        poolDecimals = poolContract.functions.decimals().call()
+                        tokenContract = contracts_info.get_contract(token2)
+                        eth_pool = f"ETH/{tokenContract.symbol}"
+                        poolContract = fetch_uniswap_pool_contract(token1, token2, contracts, key=eth_pool)
+                        poolDecimals = poolContract.decimals
                         txHash = transaction["hash"]
                         logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
                         if len(logs) > 0:
-                            transaction["values"][token] = poolContract.events.Swap().processLog(logs[-1])["args"]["amount0Out"]/pow(10, poolDecimals)
+                            transaction["values"][tokenContract.symbol] = poolContract.w3_contract.events.Swap().processLog(logs[-1])["args"]["amount0Out"]/pow(10, tokenContract.decimals)
                             transaction["values"]["ETH"] = (-int(transaction["value"])/pow(10, poolDecimals)- transaction["txCost"])
 
                     if func == "addLiquidityETH":
-                        token1 = contracts["WETH"]["address"]
+                        token1 = contracts["WETH"].address
                         token2 = input[1]["token"]
-                        poolContract = fetch_uniswap_pool_contract(token1, token2, contracts)
-                        poolDecimals = poolContract.functions.decimals().call()
-                        token_abi = fetch_abi(token2)
-                        tokenContract = w3.eth.contract(
-                            w3.toChecksumAddress(token2),
-                            abi=token_abi
-                        )
-                        token = tokenContract.functions.symbol().call()
+                        tokenContract = contracts_info.get_contract(token2)
+                        eth_pool = f"ETH/{tokenContract.symbol}"
+                        poolContract = fetch_uniswap_pool_contract(token1, token2, contracts, key=eth_pool)
+                        poolDecimals = poolContract.decimals
                         logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
                         if len(logs) > 0:
-                            eth_pool = f"ETH/{token}"
                             if transaction["values"].get(eth_pool) == None:
                                 transaction["values"][eth_pool] = 0
-                            transaction["values"][eth_pool] = poolContract.events.Transfer().processLog(logs[-3])["args"]["value"]/pow(10,poolDecimals)
+                            transaction["values"][eth_pool] = poolContract.w3_contract.events.Transfer().processLog(logs[-3])["args"]["value"]/pow(10,poolDecimals)
                             price_info.liquidity_positions[eth_pool] = {
                                 "timestamp": int(transaction["timeStamp"]),
                                 "token_bal": transaction["values"][eth_pool],
                             }
-                            transaction["values"]["ETH"] = -poolContract.events.Mint().processLog(logs[-1])["args"]["amount1"]/pow(10,contracts["WETH"]["decimals"])- transaction["txCost"]
-                            if transaction["values"].get(token) == None:
-                                transaction["values"][token] = 0
-                            transaction["values"][token] -= poolContract.events.Mint().processLog(logs[-1])["args"]["amount0"]/pow(10,contracts[token]["decimals"])
+                            transaction["values"]["ETH"] = -poolContract.w3_contract.events.Mint().processLog(logs[-1])["args"]["amount1"]/pow(10,contracts["WETH"].decimals)- transaction["txCost"]
+                            if transaction["values"].get(tokenContract.symbol) == None:
+                                transaction["values"][tokenContract.symbol] = 0
+                            transaction["values"][tokenContract.symbol] -= poolContract.w3_contract.events.Mint().processLog(logs[-1])["args"]["amount0"]/pow(10,tokenContract.decimals)
 
                     if func == "stakeWithPermit":
                         transaction["values"]["ETH"] = -transaction["txCost"]
@@ -163,24 +156,21 @@ def get_transactions(wallet):
                     if func == "withdraw":
                         transaction["values"]["ETH"] = -transaction["txCost"]
                     if func == "removeLiquidityETHWithPermit":
-                        token1 = contracts["WETH"]["address"]
                         token2 = input[1]["token"]
-                        poolContract = fetch_uniswap_pool_contract(token1, token2, contracts)
-                        poolDecimals = poolContract.functions.decimals().call()
-                        token_abi = fetch_abi(token2)
-                        tokenContract = w3.eth.contract(
-                            w3.toChecksumAddress(token2),
-                            abi=token_abi
-                        )
-                        token = tokenContract.functions.symbol().call()
+                        token1 = contracts["WETH"].address
+                        tokenContract = contracts_info.get_contract(token2)
+                        eth_pool = f"ETH/{tokenContract.symbol}"
+                        poolContract = fetch_uniswap_pool_contract(token1, token2, contracts, key=eth_pool)
+                        poolDecimals = poolContract.decimals
+
                         # TODO: DONT USE BALANCEOF HERE IT WON"T SCALE
-                        transaction["values"][f"ETH/{token}"] = poolContract.functions.balanceOf(w3.toChecksumAddress(wallet)).call()/pow(10, poolDecimals)
+                        transaction["values"][f"ETH/{tokenContract.symbol}"] = poolContract.w3_contract.functions.balanceOf(w3.toChecksumAddress(wallet)).call()/pow(10, poolDecimals)
                         logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
                         if len(logs) > 0:
-                            transaction["values"]["ETH"] = (poolContract.events.Burn().processLog(logs[-3])["args"]["amount1"])/pow(10,contracts["WETH"]["decimals"])- transaction["txCost"]
-                        if transaction["values"].get(token) == None:
-                            transaction["values"][token] = 0
-                        transaction["values"][token] = poolContract.events.Burn().processLog(logs[-3])["args"]["amount0"]/pow(10, poolDecimals)
+                            transaction["values"]["ETH"] = (poolContract.w3_contract.events.Burn().processLog(logs[-3])["args"]["amount1"])/pow(10,contracts["WETH"].decimals)- transaction["txCost"]
+                        if transaction["values"].get(tokenContract.symbol) == None:
+                            transaction["values"][tokenContract.symbol] = 0
+                        transaction["values"][tokenContract.symbol] = poolContract.w3_contract.events.Burn().processLog(logs[-3])["args"]["amount0"]/pow(10, poolDecimals)
                     if func == "exit":
                         transaction["values"]["ETH"] = -transaction["txCost"]
 
@@ -189,7 +179,8 @@ def get_transactions(wallet):
     new_transactions = fill_out_dates(new_transactions)
 
     new_transactions = group_by_date(new_transactions)
-    price_info.prices = {**price_info.prices, **fetch_price_data(new_transactions, contracts)}
+    print([key for key, value in contracts.items()])
+    price_info.prices = {**price_info.prices, **fetch_price_data(new_transactions, contracts_info.contracts)}
 
     reduce(functools.partial(balance_calc, contracts=contracts), new_transactions, {})
     liquidity_returns = get_batched_returns(price_info.liquidity_position_timestamps)

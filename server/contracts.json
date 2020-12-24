@@ -4,13 +4,9 @@
     "address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
     "decimals": 8
   },
-  "SHAKEPAY": { "address": "0x81b019a5c85adf9045140f689154faecdf20b0bf" },
-  "BTCtoETH": { "address": "0xe7324d9ac91abcd37aed8e9c8846791ebfd16513" },
-  "METAMASK": { "address": "0x225ef95fa90f4F7938A5b34234d14768cB4263dd" },
-  "GEMINI": { "address": "0x2c942d438f8e4b7b49252e896ee4745ca6d96aea" },
-  "MEW": {
+  "SHAKEPAY": {
     "address": [
-      "0x0d74c19b87cee6d9d4f843e2ddb5f8bc2dd42c08",
+      "0x81b019a5c85adf9045140f689154faecdf20b0bf",
       "0xa2948dcffa94ef110f880675f05b112bdf9750c2",
       "0x90e577775a9f2130979a041d99a6e7af1835f79d",
       "0xbd20672851a3b7588ad1c5b83027dcdd566b0d10",
@@ -20,6 +16,10 @@
       "0x9bdfaa68548dfde712898bcd0f1ebd2225244224"
     ]
   },
+  "BTCtoETH": { "address": "0xe7324d9ac91abcd37aed8e9c8846791ebfd16513" },
+  "METAMASK": { "address": "0x225ef95fa90f4F7938A5b34234d14768cB4263dd" },
+  "GEMINI": { "address": "0x2c942d438f8e4b7b49252e896ee4745ca6d96aea" },
+  "MEW": { "address": "0x0d74c19b87cee6d9d4f843e2ddb5f8bc2dd42c08" },
   "UniswapPrivacyRouter": {
     "address": "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
   },
