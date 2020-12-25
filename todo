@@ -17,17 +17,18 @@ First:
     ❌ (ConnectNulls={false} is not supported for stacked area graphs in recharts) replace places that use transaction[-1]["balances] to get a list of tokens used and
        remove token balances that are less than 1 cent, to unclutter the graph
     ✅ calculate total balance per date and percent changes per date
-▶️  Use models for data types
+✅ Use classes for contract data
+✅ Fix missing contract data (some uniswap pools seem to be missing)
+✅ Automatically detect and utilize token decimals
+✅ Automatically detect new tokens and grab or (prompt user to grab) contract address, abi, and price history
+✅ Refactor api.py
+▶️  Add celery and redis for asynchronous background task execution and progress bar on the front end
 ▶️  Fix bug with final transaction skipping a day until like 8pm. Seems like a timezones issue
-▶️  Fix missing contract data (some uniswap pools seem to be missing)
 ▶️  Have better error reporting
     ▶️  Trickle errors to the front-end
 ▶️  Only update missing price info and missing transactions
 ▶️  Verify token balances for every transaction
-▶️  Automatically detect and utilize token decimals
-▶️  Automatically detect new tokens and grab or (prompt user to grab) contract address, abi, and price history
 ▶️  Automatically decrease batch size if subgraph returns 413
-▶️  Refactor api.py
 
 Liquidity Pools:
 ✅ Determine rewards. Get percentage staked from contract, compare original amountIn with current pool amounts
