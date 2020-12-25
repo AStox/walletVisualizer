@@ -84,19 +84,14 @@ def get_transactions(wallet):
                         eth_pool = f"ETH/{tokenContract.symbol}"
                         poolContract = fetch_uniswap_pool_contract(token1, token2, contracts, key=eth_pool)
                         poolDecimals = poolContract.decimals
-                        # TODO: DONT USE BALANCEOF HERE IT WON"T SCALE
-                        transaction["values"][eth_pool] = float(
-                            tokenContract.w3_contract.functions.balanceOf(
-                                w3.toChecksumAddress(wallet)
-                            ).call()/pow(10, poolDecimals)
-                        )
                         pool = f"WETH/{tokenContract.symbol}"
                         logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
                         if len(logs) > 0:
+                            transaction["values"][eth_pool] = -(poolContract.w3_contract.events.Transfer().processLog(logs[0])["args"]["value"])/pow(10, poolDecimals)
                             transaction["values"]["ETH"] = poolContract.w3_contract.events.Swap().processLog(logs[-2])["args"]["amount1Out"]/pow(10,contracts["WETH"].decimals)- transaction["txCost"]
                         if transaction["values"].get(tokenContract.symbol) == None:
                             transaction["values"][tokenContract.symbol] = 0
-                        transaction["values"][tokenContract.symbol] = -poolContract.w3_contract.events.Swap().processLog(logs[-2])["args"]["amount0In"]/pow(10, poolDecimals)
+                        transaction["values"][tokenContract.symbol] = -poolContract.w3_contract.events.Swap().processLog(logs[-2])["args"]["amount0In"]/pow(10, tokenContract.decimals)
                     if func == "swapETHForExactTokens":
                         address = input[1]["path"][-1].lower()
                         key = contracts_info.get_contract(address=input[1]["path"][-1].lower()).symbol
@@ -162,24 +157,23 @@ def get_transactions(wallet):
                         eth_pool = f"ETH/{tokenContract.symbol}"
                         poolContract = fetch_uniswap_pool_contract(token1, token2, contracts, key=eth_pool)
                         poolDecimals = poolContract.decimals
-
-                        # TODO: DONT USE BALANCEOF HERE IT WON"T SCALE
-                        transaction["values"][f"ETH/{tokenContract.symbol}"] = poolContract.w3_contract.functions.balanceOf(w3.toChecksumAddress(wallet)).call()/pow(10, poolDecimals)
+                        print(dir(poolContract.w3_contract.events.Transfer()))
                         logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
                         if len(logs) > 0:
+                            transaction["values"][eth_pool] = -(poolContract.w3_contract.events.Transfer().processLog(logs[1])["args"]["value"])/pow(10, poolDecimals)
                             transaction["values"]["ETH"] = (poolContract.w3_contract.events.Burn().processLog(logs[-3])["args"]["amount1"])/pow(10,contracts["WETH"].decimals)- transaction["txCost"]
-                        if transaction["values"].get(tokenContract.symbol) == None:
-                            transaction["values"][tokenContract.symbol] = 0
-                        transaction["values"][tokenContract.symbol] = poolContract.w3_contract.events.Burn().processLog(logs[-3])["args"]["amount0"]/pow(10, poolDecimals)
+                        # if transaction["values"].get(tokenContract.symbol) == None:
+                        #     transaction["values"][tokenContract.symbol] = 0
+                        transaction["values"][tokenContract.symbol] = poolContract.w3_contract.events.Burn().processLog(logs[-3])["args"]["amount0"]/pow(10, tokenContract.decimals)
                     if func == "exit":
                         transaction["values"]["ETH"] = -transaction["txCost"]
+                    print(func)
 
     new_transactions =  new_transactions
     last_block_number = new_transactions[-1]["blockNumber"]
     new_transactions = fill_out_dates(new_transactions)
 
     new_transactions = group_by_date(new_transactions)
-    print([key for key, value in contracts.items()])
     price_info.prices = {**price_info.prices, **fetch_price_data(new_transactions, contracts_info.contracts)}
 
     reduce(functools.partial(balance_calc, contracts=contracts), new_transactions, {})
