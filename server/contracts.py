@@ -22,10 +22,8 @@ class Contracts:
         return Contracts.__instance
 
     def get_contract(self, address=None, symbol=None):
-        # print('get contract', symbol, address)
         if symbol:
             if self.contracts.get(symbol):
-                # print('got via symbol')
                 return self.contracts[symbol]
         if address:
             address = w3.toChecksumAddress(address)
@@ -34,21 +32,10 @@ class Contracts:
                     if symbol:
                         self.contracts[symbol] = value
                         self.contracts.pop(key)
-                    # print('got via address')
                     return value
             return self.add_contract(address, key=symbol)
     
-    def populate_contract_data(self, transactions, old_contracts):
-        contracts_data = {}
-        addresses = collect_addresses(transactions)
-        
-        # for key, value in old_contracts.items():
-        #     abi = fetch_address(value["address"], old_contracts)
-        #     if abi:
-        #         name = key
-        #         symbol = key
-        #         contracts_data[symbol] = Contract("abi": abi, "address": value["address"], "name": name, "decimals": value.get("decimals") or 18})
-        
+    def populate_contract_data(self, transactions, special_contracts):
         for key, value in special_contracts.items():
             abi = fetch_abi(value["address"])
             if abi:
@@ -59,14 +46,9 @@ class Contracts:
                 if 'decimals' in dir(contract.functions):
                     decimals = contract.functions.decimals().call()
                 self.contracts[symbol] = Contract(abi=abi, symbol=symbol, address=value["address"], name=name, decimals=decimals)
-
-        # for addr in addresses:
-        #     self.add_contract(addr)
-        print([[key, value.decimals] for key,value in self.contracts.items()])
         return self.contracts
 
     def add_contract(self, address, key=None):
-        # print("add_contract", key, address)
         address = w3.toChecksumAddress(address)
         abi = fetch_abi(address)
         if abi:
@@ -82,7 +64,6 @@ class Contracts:
                 self.contracts[key or address] = Contract(abi=abi, address=address)
                 print(f"Adding contract {key or address}")
                 return self.contracts[key or address]
-        # print(f"No ABI for {key or address}")
         return None
 
 
@@ -101,7 +82,6 @@ def fetch_uniswap_pool_contract(token1, token2, contracts, key=None):
     token2 = w3.toChecksumAddress(token2)
     factory = contracts["UniswapFactory"].w3_contract
     pool = factory.functions.getPair(token1, token2).call()
-    print(key, pool)
     contract = Contracts.getInstance().get_contract(pool, symbol=key)
     return contract
 
