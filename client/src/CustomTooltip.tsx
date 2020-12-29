@@ -64,24 +64,31 @@ const CustomTooltip = (props) => {
                     <td
                       style={{
                         color:
-                          props.payload[0].payload._24hourChange.total > 0
+                          (props.payload[0].payload._24hourChange.total || 0) >
+                          0
                             ? "green"
                             : "red",
                       }}
                     >
-                      {props.payload[0].payload._24hourChange.total.toFixed(2)}%
+                      {(
+                        props.payload[0].payload._24hourChange.total || 0
+                      ).toFixed(2)}
+                      %
                     </td>
                   )}
                   {props.payload[0].payload._1weekChange && (
                     <td
                       style={{
                         color:
-                          props.payload[0].payload._1weekChange.total > 0
+                          (props.payload[0].payload._1weekChange.total || 0) > 0
                             ? "green"
                             : "red",
                       }}
                     >
-                      {props.payload[0].payload._1weekChange.total.toFixed(2)}%
+                      {(
+                        props.payload[0].payload._1weekChange.total || 0
+                      ).toFixed(2)}
+                      %
                     </td>
                   )}
                 </tr>

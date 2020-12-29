@@ -21,19 +21,6 @@ class Contracts:
             Contracts()
         return Contracts.__instance
 
-    def get_contract(self, address=None, symbol=None):
-        if symbol:
-            if self.contracts.get(symbol):
-                return self.contracts[symbol]
-        if address:
-            address = w3.toChecksumAddress(address)
-            for key, value in self.contracts.items():
-                if address in value.address:
-                    if symbol:
-                        self.contracts[symbol] = value
-                        self.contracts.pop(key)
-                    return value
-            return self.add_contract(address, key=symbol)
     
     def populate_contract_data(self, transactions, special_contracts):
         for key, value in special_contracts.items():
@@ -47,6 +34,20 @@ class Contracts:
                     decimals = contract.functions.decimals().call()
                 self.contracts[symbol] = Contract(abi=abi, symbol=symbol, address=value["address"], name=name, decimals=decimals)
         return self.contracts
+
+    def get_contract(self, address=None, symbol=None):
+        if symbol:
+            if self.contracts.get(symbol):
+                return self.contracts[symbol]
+        if address:
+            address = w3.toChecksumAddress(address)
+            for key, value in self.contracts.items():
+                if address in value.address:
+                    if symbol:
+                        self.contracts[symbol] = value
+                        self.contracts.pop(key)
+                    return value
+            return self.add_contract(address, key=symbol)
 
     def add_contract(self, address, key=None):
         address = w3.toChecksumAddress(address)
@@ -72,9 +73,19 @@ class Contract:
         self.abi = abi
         self.address = address
         self.name = name
-        self.symbol = symbol
+        self._symbol = symbol
         self.decimals = decimals
         self.w3_contract = w3.eth.contract(w3.toChecksumAddress(address), abi=abi)
+
+    def symbol(self):
+        contracts_info = Contracts.getInstance()
+        if self._symbol == "UNI-V2":
+            token0 = self.w3_contract.functions.token0().call()
+            token1 = self.w3_contract.functions.token1().call()
+            return f"{contracts_info.get_contract(token0).symbol()}/{contracts_info.get_contract(token1).symbol()}"
+        if self._symbol == "WETH":
+            return "ETH"
+        return self._symbol
 
 
 def fetch_uniswap_pool_contract(token1, token2, contracts, key=None):
