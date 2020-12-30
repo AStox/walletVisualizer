@@ -15,7 +15,7 @@ def timestamps_between_transactions(timestamp1, timestamp2):
 
 def fill_out_dates(transactions):
     fill_dates = []
-    prices = PriceInfo.getInstance().prices
+    prices = PriceInfo.get_instance().prices
     # Filling in dates up to the last transaction
     for tx_index, tx in enumerate(transactions[0:-1]):
         for i in timestamps_between_transactions(transactions[tx_index]["timeStamp"], transactions[tx_index + 1]["timeStamp"]):
@@ -23,7 +23,7 @@ def fill_out_dates(transactions):
             token_prices = {}
             for key, value in transactions[tx_index]["values"].items():
                 values[key] = 0
-                token_prices[key] = get_price(i, key, PriceInfo.getInstance().prices)
+                token_prices[key] = get_price(i, key, PriceInfo.get_instance().prices)
             fill_dates.append(
                 {
                     "timeStamp": i,
@@ -73,7 +73,7 @@ def group_by_date(transactions):
 
     grouped_array = []
     for i, timestamp in enumerate(grouped_tx):
-        grouped_tx[timestamp]["prices"] = PriceInfo.getInstance().prices.get(timestamp) or {}
+        grouped_tx[timestamp]["prices"] = PriceInfo.get_instance().prices.get(timestamp) or {}
         grouped_tx[timestamp]["timeStamp"] = timestamp
         grouped_tx[timestamp]["values"] = reduce(
             sum_values, grouped_tx[timestamp]["transactions"], {}

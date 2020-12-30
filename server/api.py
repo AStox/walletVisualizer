@@ -10,7 +10,7 @@ from web3.auto.infura import w3
 
 from liquidity_pool_returns import get_batched_returns
 from price_fetcher import fetch_price_data
-from contracts import Contracts, fetch_abi, fetch_uniswap_pool_contract
+from contracts import Contracts, fetch_abi
 from prices import PriceInfo, percent_change_calculations, liquidity_returns_calculations, total_balance_calculations, balance_calc
 from transactions import fill_out_dates, group_by_date
 
@@ -30,8 +30,8 @@ def main():
 @app.route("/wallet/<wallet>")
 def get_transactions(wallet):
     print("Request received...")
-    price_info = PriceInfo.getInstance()
-    contracts_info = Contracts.getInstance()
+    price_info = PriceInfo.get_instance()
+    contracts_info = Contracts.get_instance()
     price_info.prices = json.load(open("prices.json", "r"))
     wallet = w3.toChecksumAddress(wallet)
     blockNumber = request.args.get("blockNumber")
@@ -84,8 +84,7 @@ def get_transactions(wallet):
                         token1 = contracts["ETH"].address
                         token2 = input[1]["path"][0]
                         tokenContract = contracts_info.get_contract(token2)
-                        eth_pool = f"ETH/{tokenContract.symbol()}"
-                        poolContract = fetch_uniswap_pool_contract(token1, token2, contracts, key=eth_pool)
+                        poolContract = contracts_info.fetch_uniswap_pool_contract(token1, token2)
                         poolDecimals = poolContract.decimals
                         pool_symbols = [contracts_info.get_contract(poolContract.w3_contract.functions.token0().call()).symbol(),contracts_info.get_contract(poolContract.w3_contract.functions.token1().call()).symbol()]
                         logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
@@ -94,7 +93,7 @@ def get_transactions(wallet):
                             transaction["values"][tokenContract.symbol()] = -poolContract.w3_contract.events.Swap().processLog(logs[-2])["args"][f"amount{pool_symbols.index(tokenContract.symbol())}In"]/pow(10, tokenContract.decimals)
                     if func == "swapETHForExactTokens":
                         address = input[1]["path"][-1]
-                        key = contracts_info.get_contract(address=address).symbol()
+                        token_contract = contracts_info.get_contract(address=address)
                         txHash = transaction["hash"]
                         time.sleep(0.1)
                         internalTx = requests.get(
@@ -107,15 +106,14 @@ def get_transactions(wallet):
                                     - transaction["txCost"]
                                 )
 
-                        transaction["values"][key] = (
-                                input[1]["amountOut"]/pow(10,contracts[key].decimals)
+                        transaction["values"][token_contract.symbol()] = (
+                                input[1]["amountOut"]/pow(10,token_contract.decimals)
                         )
                     if func == "swapExactETHForTokens":
                         token1 = contracts["ETH"].address
                         token2 = input[1]["path"][-1].lower()
                         tokenContract = contracts_info.get_contract(token2)
-                        eth_pool = f"ETH/{tokenContract.symbol()}"
-                        poolContract = fetch_uniswap_pool_contract(token1, token2, contracts, key=eth_pool)
+                        poolContract = contracts_info.fetch_uniswap_pool_contract(token1, token2,)
                         poolDecimals = poolContract.decimals
                         txHash = transaction["hash"]
                         logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
@@ -127,18 +125,15 @@ def get_transactions(wallet):
                         token_a = contracts["ETH"].address
                         token_b = input[1]["token"]
                         tokenContract = contracts_info.get_contract(token_b)
-                        eth_pool = f"ETH/{tokenContract.symbol()}"
-                        poolContract = fetch_uniswap_pool_contract(token_a, token_b, contracts, key=eth_pool)
+                        poolContract = contracts_info.fetch_uniswap_pool_contract(token_a, token_b)
                         poolDecimals = poolContract.decimals
                         pool_symbols = [contracts_info.get_contract(poolContract.w3_contract.functions.token0().call()).symbol(),contracts_info.get_contract(poolContract.w3_contract.functions.token1().call()).symbol()]
                         logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
                         if len(logs) > 0:
-                            if transaction["values"].get(eth_pool) == None:
-                                transaction["values"][eth_pool] = 0
-                            transaction["values"][eth_pool] = poolContract.w3_contract.events.Transfer().processLog(logs[-3])["args"]["value"]/pow(10,poolDecimals)
-                            price_info.liquidity_positions[eth_pool] = {
+                            transaction["values"][poolContract.symbol()] = poolContract.w3_contract.events.Transfer().processLog(logs[-3])["args"]["value"]/pow(10,poolDecimals)
+                            price_info.liquidity_positions[poolContract.symbol()] = {
                                 "timestamp": int(transaction["timeStamp"]),
-                                "token_bal": transaction["values"][eth_pool],
+                                "token_bal": transaction["values"][poolContract.symbol()],
                             }
                             transaction["values"]["ETH"] = -poolContract.w3_contract.events.Mint().processLog(logs[-1])["args"][f"amount{pool_symbols.index('ETH')}"]/pow(10,contracts["ETH"].decimals)- transaction["txCost"]
                             if transaction["values"].get(tokenContract.symbol()) == None:
@@ -149,13 +144,12 @@ def get_transactions(wallet):
                         token2 = input[1]["token"]
                         token1 = contracts["ETH"].address
                         tokenContract = contracts_info.get_contract(token2)
-                        eth_pool = f"ETH/{tokenContract.symbol()}"
-                        poolContract = fetch_uniswap_pool_contract(token1, token2, contracts, key=eth_pool)
+                        poolContract = contracts_info.fetch_uniswap_pool_contract(token1, token2)
                         poolDecimals = poolContract.decimals
                         pool_symbols = [contracts_info.get_contract(poolContract.w3_contract.functions.token0().call()).symbol(),contracts_info.get_contract(poolContract.w3_contract.functions.token1().call()).symbol()]
                         logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
                         if len(logs) > 0:
-                            transaction["values"][eth_pool] = -(poolContract.w3_contract.events.Transfer().processLog(logs[1])["args"]["value"])/pow(10, poolDecimals)
+                            transaction["values"][poolContract.symbol()] = -(poolContract.w3_contract.events.Transfer().processLog(logs[1])["args"]["value"])/pow(10, poolDecimals)
                             transaction["values"]["ETH"] = (poolContract.w3_contract.events.Burn().processLog(logs[-3])["args"][f"amount{pool_symbols.index('ETH')}"])/pow(10,contracts["ETH"].decimals)- transaction["txCost"]
                         # if transaction["values"].get(tokenContract.symbol()) == None:
                         #     transaction["values"][tokenContract.symbol()] = 0
@@ -166,27 +160,14 @@ def get_transactions(wallet):
                         transaction["values"]["ETH"] = -transaction["txCost"]
                         print(input[1])
                     if func == "withdraw":
-                        # token1 = contracts["ETH"].address
-                        # eth_pool = f"ETH/{tokenContract.symbol()}"
-                        # poolContract = fetch_uniswap_pool_contract(token1, token2, contracts, key=eth_pool)
-                        # poolDecimals = poolContract.decimals
-                        # pool_symbols = [contracts_info.get_contract(poolContract.w3_contract.functions.token0().call()).symbol(),contracts_info.get_contract(poolContract.w3_contract.functions.token1().call()).symbol()]
                         logs = w3.eth.getTransactionReceipt(transaction["hash"])["logs"]
-                        # # if len(logs) > 0:
                         for log in logs:
                             transaction_contract = contracts_info.get_contract(log["address"])
-                            # print(dir(transaction_contract.w3_contract.events.Transfer()))
-                            # print(transaction_contract.w3_contract.events.Transfer().processLog(log))
-                            print("!!!!!!")
                             try:
-                                print(transaction_contract.w3_contract.events.Transfer().processLog(log))
                                 transfer = transaction_contract.w3_contract.events.Transfer().processLog(log)
-                                print(w3.toChecksumAddress(transfer["args"]["to"]))
-                                print(wallet)
                                 if w3.toChecksumAddress(transfer["args"]["to"]) == wallet:
                                     token_contract = contracts_info.get_contract(transfer["address"])
                                     transaction["values"][token_contract.symbol()] = transfer["args"]["value"]/pow(10, token_contract.decimals)
-                                    print(token_contract.symbol(), transaction["values"][token_contract.symbol()])
                             except exceptions.ABIEventFunctionNotFound:
                                 pass
                         transaction["values"]["ETH"] = -transaction["txCost"]
@@ -203,9 +184,9 @@ def get_transactions(wallet):
     new_transactions = fill_out_dates(new_transactions)
 
     new_transactions = group_by_date(new_transactions)
-    price_info.prices = {**price_info.prices, **fetch_price_data(new_transactions, contracts_info.contracts)}
+    price_info.prices = {**price_info.prices, **fetch_price_data(new_transactions)}
 
-    reduce(functools.partial(balance_calc, contracts=contracts), new_transactions, {})
+    reduce(balance_calc, new_transactions, {})
     liquidity_returns = get_batched_returns(price_info.liquidity_position_timestamps)
     liquidity_returns_calculations(new_transactions, liquidity_returns)
     total_balance_calculations(new_transactions)

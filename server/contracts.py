@@ -16,7 +16,7 @@ class Contracts:
     contracts = {}
 
     @staticmethod 
-    def getInstance():
+    def get_instance():
         if Contracts.__instance == None:
             Contracts()
         return Contracts.__instance
@@ -36,20 +36,28 @@ class Contracts:
         return self.contracts
 
     def get_contract(self, address=None, symbol=None):
-        if symbol:
-            if self.contracts.get(symbol):
-                return self.contracts[symbol]
         if address:
             address = w3.toChecksumAddress(address)
             for key, value in self.contracts.items():
                 if address in value.address:
-                    if symbol:
-                        self.contracts[symbol] = value
+                    if key != value.symbol():
+                        self.contracts[value.symbol()] = value
                         self.contracts.pop(key)
                     return value
-            return self.add_contract(address, key=symbol)
+            return self.add_contract(address)
+        if symbol:
+            if self.contracts.get(symbol):
+                return self.contracts[symbol]
+    
+    def fetch_uniswap_pool_contract(self, token1, token2):
+        token1 = w3.toChecksumAddress(token1)
+        token2 = w3.toChecksumAddress(token2)
+        factory = self.contracts["UniswapFactory"].w3_contract
+        pool = factory.functions.getPair(token1, token2).call()
+        contract = self.get_contract(pool)
+        return contract
 
-    def add_contract(self, address, key=None):
+    def add_contract(self, address):
         address = w3.toChecksumAddress(address)
         abi = fetch_abi(address)
         if abi:
@@ -58,13 +66,15 @@ class Contracts:
                 name = contract.functions.name().call()
                 symbol = contract.functions.symbol().call()
                 decimals = contract.functions.decimals().call()
-                self.contracts[key or symbol] = Contract(abi=abi, symbol=symbol, address=address, name=name, decimals=decimals)
-                print(f"Adding contract {key or symbol}")
-                return self.contracts[key or symbol]
+                contract = Contract(abi=abi, symbol=symbol, address=address, name=name, decimals=decimals)
+                self.contracts[contract.symbol()] = contract
+                print(f"Adding contract {contract.symbol()}")
+                return contract
             else:
-                self.contracts[key or address] = Contract(abi=abi, address=address)
-                print(f"Adding contract {key or address}")
-                return self.contracts[key or address]
+                contract = Contract(abi=abi, address=address)
+                self.contracts[contract.symbol()] = contract
+                print(f"Adding contract {contract.symbol()}")
+                return contract
         return None
 
 
@@ -73,12 +83,12 @@ class Contract:
         self.abi = abi
         self.address = address
         self.name = name
-        self._symbol = symbol
+        self._symbol = symbol or address
         self.decimals = decimals
         self.w3_contract = w3.eth.contract(w3.toChecksumAddress(address), abi=abi)
 
     def symbol(self):
-        contracts_info = Contracts.getInstance()
+        contracts_info = Contracts.get_instance()
         if self._symbol == "UNI-V2":
             token0 = self.w3_contract.functions.token0().call()
             token1 = self.w3_contract.functions.token1().call()
@@ -86,15 +96,6 @@ class Contract:
         if self._symbol == "WETH":
             return "ETH"
         return self._symbol
-
-
-def fetch_uniswap_pool_contract(token1, token2, contracts, key=None):
-    token1 = w3.toChecksumAddress(token1)
-    token2 = w3.toChecksumAddress(token2)
-    factory = contracts["UniswapFactory"].w3_contract
-    pool = factory.functions.getPair(token1, token2).call()
-    contract = Contracts.getInstance().get_contract(pool, symbol=key)
-    return contract
 
 def collect_addresses(transactions):
     addresses = []

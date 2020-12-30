@@ -11,7 +11,7 @@ from prices import PriceInfo
 BATCH_SIZE = 30
 
 def get_positions(timestamp1, timestamp2, pair_address, token_balance):
-    price_info = PriceInfo.getInstance()
+    price_info = PriceInfo.get_instance()
     uri = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2"
     day_id1 = int(timestamp1 / 86400)
     pair_day_id1 = f"{pair_address.lower()}-{day_id1}"
@@ -221,7 +221,7 @@ def get_batched_query(timestamp, pair_address, query_id):
     
 
 def get_batched_positions(batched_data, index):
-    price_info = PriceInfo.getInstance()
+    price_info = PriceInfo.get_instance()
     positions = {}
     index_map = {}
     start_timestamps = []

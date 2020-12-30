@@ -1,13 +1,14 @@
 import re
 from functools import reduce
 
+from contracts import Contracts
 from utils import get_price
 
 
 class PriceInfo:
     __instance = None
     @staticmethod 
-    def getInstance():
+    def get_instance():
         if PriceInfo.__instance == None:
             PriceInfo()
         return PriceInfo.__instance
@@ -59,18 +60,20 @@ def total_balance_calculations(transactions):
             sum, tx["balancesUSD"].values(), 0
         )
 
-def balance_calc(balances, transaction, contracts):
-    price_info = PriceInfo.getInstance()
+def balance_calc(balances, transaction):
+    contract_info = Contracts.get_instance()
+    price_info = PriceInfo.get_instance()
     for i, key in enumerate(transaction["values"]):
         if not key in price_info.all_tokens:
             price_info.all_tokens.append(key)
         value = transaction["values"][key]
         balances[key] = (balances.get(key) or 0) + value
     transaction["balances"] = dict(balances)
+    print(contract_info.contracts)
     for token in transaction["balances"]:
-        transaction["prices"][token] = get_price(transaction["timeStamp"], token, PriceInfo.getInstance().prices)
+        transaction["prices"][token] = get_price(transaction["timeStamp"], token, PriceInfo.get_instance().prices)
     tempBalArrays = [
-        [key, balances[key], transaction["prices"], transaction["timeStamp"], contracts["WETH" if key == "ETH" else key].address]
+        [key, balances[key], transaction["prices"], transaction["timeStamp"], contract_info.get_contract(symbol=key).address]
         for i, key in enumerate(balances)
     ]
     usd = reduce(balancesUSD, tempBalArrays, {})
@@ -81,7 +84,7 @@ def balancesUSD(balances, balance_obj):
     [symbol, balance, prices_obj, timestamp, address] = balance_obj
     if is_uniswap_pool(symbol):
         if balance > 0.0000001:
-            price_info = PriceInfo.getInstance()
+            price_info = PriceInfo.get_instance()
             liquidity_position_timestamps = price_info.liquidity_position_timestamps
             liquidity_position_timestamps[timestamp] = liquidity_position_timestamps.get(timestamp) or {}
             liquidity_position_timestamps[timestamp][symbol] = [price_info.liquidity_positions[symbol]["timestamp"], timestamp, address, balance]
