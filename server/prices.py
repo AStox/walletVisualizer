@@ -69,7 +69,6 @@ def balance_calc(balances, transaction):
         value = transaction["values"][key]
         balances[key] = (balances.get(key) or 0) + value
     transaction["balances"] = dict(balances)
-    print(contract_info.contracts)
     for token in transaction["balances"]:
         transaction["prices"][token] = get_price(transaction["timeStamp"], token, PriceInfo.get_instance().prices)
     tempBalArrays = [
