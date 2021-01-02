@@ -1,11 +1,18 @@
 from celery import Celery
 from app import app
 
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+from liquidity_pool_returns import get_batched_returns
+from price_fetcher import fetch_price_data
+from contracts import Contracts, fetch_abi
+from prices import PriceInfo, percent_change_calculations, liquidity_returns_calculations, total_balance_calculations, balance_calc
+from transactions import fill_out_dates, group_by_date
+
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'], backend=app.config['CELERY_RESULT_BACKEND'],)
 celery.conf.update(app.config)
 
 @celery.task(bind=True)
 def get_transactions(self, wallet, blockNumber):
+    print(app.config['CELERY_BROKER_URL'])
     print("Request received...")
     price_info = PriceInfo.get_instance()
     contracts_info = Contracts.get_instance()

@@ -24,23 +24,24 @@ const Main = () => {
   const [transaction, setTransaction] = useState({});
   const [address, setAddress] = useState("");
   const [showUSD, setShowUSD] = useState(true);
-  const [taskPollingUrl, setTaskPollingUrl] = useState(null);
+  const [taskId, setTaskId] = useState(null);
 
   useEffect(() => {
-    if (taskPollingUrl) {
+    if (taskId) {
       fetchTaskStatus();
     }
-  }, [taskPollingUrl]);
+  }, [taskId]);
 
   const fetchTaskStatus = () => {
-    fetch(taskPollingUrl)
+    const url = `/api/status/${taskId}`;
+    fetch(url)
       .then((res) => res.json())
       .then((res) => {
         console.log(res);
         if (res.state != "PENDING" && res.state != "PROGRESS") {
           console.log(res);
         } else {
-          fetchTaskStatus();
+          setTimeout(() => fetchTaskStatus(), 1000);
         }
       });
   };
@@ -111,7 +112,9 @@ const Main = () => {
     const blockNumber = addressData?.last_block_number || 0;
     const url = `/api/wallet/${address}?blockNumber=${blockNumber}`;
 
-    fetch(url).then((res) => setTaskPollingUrl(res.headers.get("location")));
+    fetch(url)
+      .then((res) => res.json())
+      .then((res) => setTaskId(res.task_id));
     // .then((res) => res.json())
     // .then((data) => formatRawData(data));
   };

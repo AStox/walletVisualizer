@@ -9,11 +9,6 @@ from web3 import exceptions
 from web3.auto.infura import w3
 
 from app import app
-from liquidity_pool_returns import get_batched_returns
-from price_fetcher import fetch_price_data
-from contracts import Contracts, fetch_abi
-from prices import PriceInfo, percent_change_calculations, liquidity_returns_calculations, total_balance_calculations, balance_calc
-from transactions import fill_out_dates, group_by_date
 from tasks import get_transactions
 
 my_account = os.environ.get("MY_ACC")
@@ -31,7 +26,7 @@ def main():
 def get_wallet_transactions(wallet):
     blockNumber = request.args.get("blockNumber")
     task = get_transactions.delay(wallet, blockNumber)
-    return jsonify({}), 202, {'Location': url_for('taskstatus', task_id=task.id)}
+    return jsonify({'task_id': task.id}), 202
 
 @app.route('/status/<task_id>')
 def taskstatus(task_id):
