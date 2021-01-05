@@ -1,30 +1,48 @@
 from celery import Celery
 from app import app
-
+import requests
+import time
+import json
+import functools
+import os
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+from flask import Flask, url_for
+from web3 import exceptions
 from liquidity_pool_returns import get_batched_returns
 from price_fetcher import fetch_price_data
 from contracts import Contracts, fetch_abi
 from prices import PriceInfo, percent_change_calculations, liquidity_returns_calculations, total_balance_calculations, balance_calc
 from transactions import fill_out_dates, group_by_date
+from functools import reduce
+from web3.auto.infura import w3
 
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'], backend=app.config['CELERY_RESULT_BACKEND'],)
 celery.conf.update(app.config)
 
+my_account = os.environ.get("MY_ACC")
+etherscan_api_key = os.environ.get("ETHERSCAN_API_KEY")
+
+special_contracts = json.load(open("contracts.json", "r"))
+
+
 @celery.task(bind=True)
 def get_transactions(self, wallet, blockNumber):
-    print(app.config['CELERY_BROKER_URL'])
-    print("Request received...")
+    message = "Starting..."
+    self.update_state(state='PROGRESS', meta={'current': 0, 'total': 0,'status': message})
     price_info = PriceInfo.get_instance()
     contracts_info = Contracts.get_instance()
+    print("yup")
     price_info.prices = json.load(open("prices.json", "r"))
     wallet = w3.toChecksumAddress(wallet)
+    print("ok")
     response = requests.get(
         f"https://api.etherscan.io/api?module=account&action=txlist&address={wallet}&startblock={blockNumber}&endblock=99999999&sort=asc&apikey={etherscan_api_key}"
     )
+    print('ya')
     new_transactions = response.json()["result"]
     contracts_info.populate_contract_data(new_transactions, special_contracts)
     contracts = contracts_info.contracts
-
+    print("um")
     
 
     for index, transaction in enumerate(new_transactions):

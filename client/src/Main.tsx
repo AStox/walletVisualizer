@@ -41,7 +41,7 @@ const Main = () => {
         if (res.state != "PENDING" && res.state != "PROGRESS") {
           console.log(res);
         } else {
-          setTimeout(() => fetchTaskStatus(), 1000);
+          setTimeout(() => fetchTaskStatus(), 3000);
         }
       });
   };

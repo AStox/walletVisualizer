@@ -1,22 +1,9 @@
-import requests
 import os
-import time
 import json
-import functools
-from flask import Flask, request, jsonify, url_for
-from functools import reduce
-from web3 import exceptions
-from web3.auto.infura import w3
-
+import requests
 from app import app
+from flask import request, jsonify
 from tasks import get_transactions
-
-my_account = os.environ.get("MY_ACC")
-etherscan_api_key = os.environ.get("ETHERSCAN_API_KEY")
-
-special_contracts = json.load(open("contracts.json", "r"))
-
-errors = []
 
 @app.route("/")
 def main():
