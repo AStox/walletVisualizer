@@ -4,7 +4,6 @@ import sys
 import json
 import datetime
 import math
-from web3.auto.infura import w3
 from contracts import Contracts
 from utils import get_price, round_down_datetime, run_query
 

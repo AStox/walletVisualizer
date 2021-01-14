@@ -2,14 +2,15 @@ import React, { useEffect, useRef, useState } from "react";
 
 import AddressInput from "./AddressInput";
 import WalletGraph from "./WalletGraph";
+import ProgressBar from "./ProgressBar";
 import { listParams } from "./Utils";
 import Toggle from "react-toggle";
 import { IoLogoUsd } from "react-icons/io";
 import { FaEthereum } from "react-icons/fa";
+import { forEach, includes } from "lodash";
 
 import "./Main.sass";
 import "react-toggle/style.css";
-import { filter, forEach, includes } from "lodash";
 
 const Main = () => {
   const targetRef = useRef();
@@ -20,11 +21,14 @@ const Main = () => {
         last_block_number: number;
       }
     | undefined
-  >(undefined);
+  >(null);
   const [transaction, setTransaction] = useState({});
   const [address, setAddress] = useState("");
   const [showUSD, setShowUSD] = useState(true);
   const [taskId, setTaskId] = useState(null);
+  const [progress, setProgress] = useState(null);
+  const [progressMessage, setProgressMessage] = useState("");
+  // const [progress, setP]
 
   useEffect(() => {
     if (taskId) {
@@ -38,10 +42,14 @@ const Main = () => {
       .then((res) => res.json())
       .then((res) => {
         console.log(res);
-        if (res.state != "PENDING" && res.state != "PROGRESS") {
-          console.log(res);
+        if (res.state === "SUCCESS") {
+          formatRawData(res.result);
+          setProgress(null);
+          setProgressMessage("");
         } else {
-          setTimeout(() => fetchTaskStatus(), 3000);
+          setProgress((res.current / res.total) * 100);
+          setProgressMessage(res.status);
+          setTimeout(() => fetchTaskStatus(), 1000);
         }
       });
   };
@@ -140,15 +148,22 @@ const Main = () => {
           </div>
         </div>
       </div>
-      <div ref={targetRef}>
-        <WalletGraph
-          targetRef={targetRef}
-          setTransaction={setTransaction}
-          transactions={addressData?.transactions}
-          allTokens={addressData?.all_tokens}
-          showUSD={showUSD}
-        />
-      </div>
+      {progress && (
+        <div className="progress-bar-flex-container">
+          <ProgressBar progress={progress} progressMessage={progressMessage} />
+        </div>
+      )}
+      {addressData && (
+        <div ref={targetRef}>
+          <WalletGraph
+            targetRef={targetRef}
+            setTransaction={setTransaction}
+            transactions={addressData?.transactions}
+            allTokens={addressData?.all_tokens}
+            showUSD={showUSD}
+          />
+        </div>
+      )}
       <div>
         <ul>{listParams(transaction)}</ul>
       </div>

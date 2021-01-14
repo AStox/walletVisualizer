@@ -1,8 +1,9 @@
 import requests
 import os
 import json
-from web3.auto.infura import w3
+from web3 import Web3
 
+w3 = Web3(Web3.HTTPProvider(f'https://mainnet.infura.io/v3/{os.environ.get("WEB3_INFURA_PROJECT_ID")}'))
 etherscan_api_key = os.environ.get("ETHERSCAN_API_KEY")
 
 class Contracts:
