@@ -9,11 +9,12 @@ from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import Flask, url_for
 from web3 import Web3, exceptions
 from liquidity_pool_returns import get_batched_returns
-from price_fetcher import fetch_price_data
+from price_fetcher import PriceFetcher
 from contracts import Contracts, fetch_abi
 from prices import PriceInfo, percent_change_calculations, liquidity_returns_calculations, total_balance_calculations, balance_calc
 from transactions import fill_out_dates, group_by_date
 from functools import reduce
+from numpy import copy
 # from web3.auto.infura import w3
 
 w3 = Web3(Web3.HTTPProvider(f'https://mainnet.infura.io/v3/{os.environ.get("WEB3_INFURA_PROJECT_ID")}'))
@@ -25,38 +26,40 @@ etherscan_api_key = os.environ.get("ETHERSCAN_API_KEY")
 
 special_contracts = json.load(open("contracts.json", "r"))
 
-@celery.task()
-def test_task():
-    address = w3.toChecksumAddress('0xdac17f958d2ee523a2206206994597c13d831ec7')
-    print('address: ', address)
-    abi = fetch_abi(address)
-    contract = w3.eth.contract(address, abi=abi)
-    print('contract: ', contract)
-    print(w3.eth.blockNumber)
+@celery.task(bind=True)
+def test_task(self):
+    pass
 
+def increment():
+    global current
+    current += 1
+    return current
 
 @celery.task(bind=True)
 def get_transactions(self, wallet, blockNumber):
     self.update_state(state='PROGRESS', meta={'current': 0, 'total': 0,'status': "Starting..."})
     price_info = PriceInfo.get_instance()
     contracts_info = Contracts.get_instance()
-    print("yup")
     price_info.prices = json.load(open("prices.json", "r"))
     wallet = w3.toChecksumAddress(wallet)
-    print("ok")
     response = requests.get(
         f"https://api.etherscan.io/api?module=account&action=txlist&address={wallet}&startblock={blockNumber}&endblock=99999999&sort=asc&apikey={etherscan_api_key}"
     )
-    print('ya')
     new_transactions = response.json()["result"]
     contracts_info.populate_contract_data(new_transactions, special_contracts)
     contracts = contracts_info.contracts
-    print("um")
     
+    temp_transactions = new_transactions.copy()
+    # This is wasteful! Just need the final number of transactions
+    temp_transactions = fill_out_dates(temp_transactions)
+    batch_count = PriceFetcher(self, transactions=temp_transactions).batch_count
+    total = len(new_transactions) + batch_count
+    global current
+    current = 0
 
     for index, transaction in enumerate(new_transactions):
         try:
-            self.update_state(state='PROGRESS', meta={'current': index, 'total': len(new_transactions),'status': "Processing transactions..."})
+            self.update_state(state='PROGRESS', meta={'current': increment(), 'total': total,'status': "Processing transactions..."})
             transaction["values"] = {}
             transaction["prices"] = {}
             transaction["txCost"] = 0
@@ -197,20 +200,23 @@ def get_transactions(self, wallet, blockNumber):
     new_transactions = fill_out_dates(new_transactions)
     new_transactions = group_by_date(new_transactions)
 
-    self.update_state(state='PROGRESS', meta={'current': len(new_transactions)+1, 'total': len(new_transactions)+5,'status': "Fetching historical prices..."})
-    price_info.prices = {**price_info.prices, **fetch_price_data(new_transactions)}
+    def update():
+        self.update_state(state='PROGRESS', meta={'current': increment(), 'total': total,'status': "Fetching historical prices..."})
 
-    self.update_state(state='PROGRESS', meta={'current': len(new_transactions)+2, 'total': len(new_transactions)+5,'status': "Compiling token balances..."})
+    price_fetcher = PriceFetcher(on_update=update, transactions=new_transactions)
+    price_info.prices = {**price_info.prices, **price_fetcher.fetch_price_data()}
+
+    self.update_state(state='PROGRESS', meta={'current': increment(), 'total': total,'status': "Compiling token balances..."})
     reduce(balance_calc, new_transactions, {})
 
-    self.update_state(state='PROGRESS', meta={'current': len(new_transactions)+3, 'total': len(new_transactions)+5,'status': "Calculating staked liquidity returns..."})
+    self.update_state(state='PROGRESS', meta={'current': increment(), 'total': total,'status': "Calculating staked liquidity returns..."})
     liquidity_returns = get_batched_returns(price_info.liquidity_position_timestamps)
     liquidity_returns_calculations(new_transactions, liquidity_returns)
 
-    self.update_state(state='PROGRESS', meta={'current': len(new_transactions)+4, 'total': len(new_transactions)+5,'status': "Calculating percent changes..."})
+    self.update_state(state='PROGRESS', meta={'current': increment(), 'total': total,'status': "Calculating percent changes..."})
     total_balance_calculations(new_transactions)
     percent_change_calculations(new_transactions)
 
     addressData = {"transactions": new_transactions, "all_tokens": price_info.all_tokens, "last_block_number": last_block_number}
-    return {'current': len(new_transactions)+5, 'total': len(new_transactions)+5, 'status': 'Finished!',
+    return {'current': increment(), 'total': total, 'status': 'Finished!',
             'result': addressData}

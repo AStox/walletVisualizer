@@ -21,9 +21,10 @@ def fill_out_dates(transactions):
         for i in timestamps_between_transactions(transactions[tx_index]["timeStamp"], transactions[tx_index + 1]["timeStamp"]):
             values = {}
             token_prices = {}
-            for key, value in transactions[tx_index]["values"].items():
-                values[key] = 0
-                token_prices[key] = get_price(i, key, PriceInfo.get_instance().prices)
+            if transactions[tx_index].get("values", None):
+                for key, value in transactions[tx_index]["values"].items():
+                    values[key] = 0
+                    token_prices[key] = get_price(i, key, PriceInfo.get_instance().prices)
             fill_dates.append(
                 {
                     "timeStamp": i,
@@ -38,9 +39,10 @@ def fill_out_dates(transactions):
     for i in timestamps_between_transactions(transactions[-1]["timeStamp"], now_timestamp):
         values = {}
         token_prices = {}
-        for key, value in transactions[-1]["values"].items():
-            values[key] = 0
-            token_prices[key] = get_price(i, key, prices)
+        if transactions[tx_index].get("values", None):
+            for key, value in transactions[-1]["values"].items():
+                values[key] = 0
+                token_prices[key] = get_price(i, key, prices)
         fill_dates.append(
             {"timeStamp": i, "values": values, "prices": token_prices, "isError": 0}
         )
@@ -49,9 +51,10 @@ def fill_out_dates(transactions):
     now = int(datetime.datetime.now().timestamp())
     values = {}
     token_prices = {}
-    for key, value in transactions[-1]["values"].items():
-            values[key] = 0
-            token_prices[key] = get_price(now, key, prices)
+    if transactions[tx_index].get("values", None):
+        for key, value in transactions[-1]["values"].items():
+                values[key] = 0
+                token_prices[key] = get_price(now, key, prices)
     fill_dates.append(
         {"timeStamp": now, "values": values, "prices": token_prices, "isError": 0}
     )

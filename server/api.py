@@ -3,10 +3,11 @@ import json
 import requests
 from app import app
 from flask import request, jsonify
-from tasks import get_transactions
+from tasks import get_transactions, test_task
 
 @app.route("/")
 def main():
+    task = test_task.delay()
     return "hi"
 
 @app.route("/wallet/<wallet>")
