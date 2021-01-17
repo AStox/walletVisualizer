@@ -22,11 +22,12 @@ First:
 ✅ Automatically detect and utilize token decimals
 ✅ Automatically detect new tokens and grab or (prompt user to grab) contract address, abi, and price history
 ✅ Refactor api.py
+✅  Add celery and redis for asynchronous background task execution and progress bar on the front end
+✅  Have better error reporting
+    ✅  Trickle errors to the front-end
 ▶️  Verify token balances for every transaction
-▶️  Add celery and redis for asynchronous background task execution and progress bar on the front end
+▶️  Use asyncio for http requests
 ▶️  Fix bug with final transaction skipping a day until like 8pm. Seems like a timezones issue
-▶️  Have better error reporting
-    ▶️  Trickle errors to the front-end
 ▶️  Only update missing price info and missing transactions
 ▶️  Automatically decrease batch size if subgraph returns 413
 
