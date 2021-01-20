@@ -17,7 +17,7 @@ import {
 import CustomTooltip from "./CustomTooltip";
 import LineFactory, { AreaFactory, GradientFactory } from "./LineFactory";
 
-import "./walletGraph.sass";
+import "./WalletGraph.sass";
 
 interface Props {
   targetRef: MutableRefObject<undefined>;

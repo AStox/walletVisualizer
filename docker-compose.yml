@@ -1,6 +1,6 @@
 version: "3"
 services:
-  frontend:
+  client:
     container_name: client
     build:
       context: ./client
@@ -8,10 +8,10 @@ services:
     ports:
       - 80:80
       - 443:443
-    volumes:
-      - /home/ubuntu/ssl:/etc/nginx/certs
+    # volumes:
+    #   - /home/ubuntu/ssl:/etc/nginx/certs
 
-  backend:
+  server:
     restart: always
     container_name: server
     build: ./server

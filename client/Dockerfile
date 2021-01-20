@@ -3,13 +3,14 @@ RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 COPY package.json /usr/src/app
 
-RUN npm install
+RUN yarn install --production
 
 COPY . /usr/src/app
-RUN npm run build
+
+RUN yarn build
 
 FROM nginx:alpine
-COPY --from=build /usr/src/app/build /usr/share/nginx/html
+COPY --from=build /usr/src/app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 80
