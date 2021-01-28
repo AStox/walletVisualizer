@@ -1,30 +1,27 @@
-from celery import Celery
-from app import app
 import requests
 import time
 import json
 import functools
 import os
+from app import celery
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import Flask, url_for
 from web3 import Web3, exceptions
-from liquidity_pool_returns import get_batched_returns
-from price_fetcher import PriceFetcher
-from contracts import Contracts, fetch_abi
-from prices import PriceInfo, percent_change_calculations, liquidity_returns_calculations, total_balance_calculations, balance_calc
-from transactions import fill_out_dates, group_by_date
+from app.liquidity_pool_returns import get_batched_returns
+from app.price_fetcher import PriceFetcher
+from app.contracts import Contracts, fetch_abi
+from app.prices import PriceInfo, percent_change_calculations, liquidity_returns_calculations, total_balance_calculations, balance_calc
+from app.transactions import fill_out_dates, group_by_date
 from functools import reduce
 from numpy import copy
 # from web3.auto.infura import w3
 
 w3 = Web3(Web3.HTTPProvider(f'https://mainnet.infura.io/v3/{os.environ.get("WEB3_INFURA_PROJECT_ID")}'))
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'], backend=app.config['CELERY_RESULT_BACKEND'],)
-celery.conf.update(app.config)
 
 my_account = os.environ.get("MY_ACC")
 etherscan_api_key = os.environ.get("ETHERSCAN_API_KEY")
 
-special_contracts = json.load(open("contracts.json", "r"))
+special_contracts = json.load(open("app/contracts.json", "r"))
 
 @celery.task(bind=True)
 def test_task(self):

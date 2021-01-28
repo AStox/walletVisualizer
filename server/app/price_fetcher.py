@@ -4,8 +4,8 @@ import sys
 import json
 import datetime
 import math
-from contracts import Contracts
-from utils import get_price, round_down_datetime, run_query
+from app.contracts import Contracts
+from app.utils import get_price, round_down_datetime, run_query
 
 class PriceFetcher:
 

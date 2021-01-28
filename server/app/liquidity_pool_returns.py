@@ -4,8 +4,8 @@ import sys
 import json
 import datetime
 import math
-from utils import get_price, round_down_datetime, run_query
-from prices import PriceInfo
+from app.utils import get_price, round_down_datetime, run_query
+from app.prices import PriceInfo
 
 BATCH_SIZE = 30
 

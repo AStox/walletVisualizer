@@ -7,8 +7,13 @@ RUN pip install --upgrade pip
 RUN pip install pipenv
 
 COPY Pipfile Pipfile.lock /usr/src/app/
-
 RUN pipenv install --system --deploy --ignore-pipfile
 
-ENTRYPOINT [ "flask" ]
-CMD ["run", "--host=0.0.0.0", "--port=5000"]
+COPY app ./app
+Copy *.sh \ /usr/src/app/
+
+
+# CMD /usr/src/app/start-gunicorn.sh
+
+# ENTRYPOINT [ "flask" ]
+# CMD ["run", "--host=0.0.0.0", "--port=5000"]

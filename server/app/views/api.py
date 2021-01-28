@@ -1,22 +1,25 @@
 import os
 import json
 import requests
-from app import app
-from flask import request, jsonify
-from tasks import get_transactions, test_task
+from flask import Flask, Blueprint, request, jsonify
 
-@app.route("/")
+api = Blueprint('api', __name__)
+
+@api.route("/")
 def main():
+    from app.tasks import test_task
     task = test_task.delay()
     return "hi"
 
-@app.route("/wallet/<wallet>")
+@api.route("/wallet/<wallet>", methods=['GET'])
 def get_wallet_transactions(wallet):
+    print("HELLOO")
     blockNumber = request.args.get("blockNumber")
+    from app.tasks import get_transactions
     task = get_transactions.delay(wallet, blockNumber)
     return jsonify({'task_id': task.id}), 202
 
-@app.route('/status/<task_id>')
+@api.route('/status/<task_id>', methods=['GET'])
 def taskstatus(task_id):
     task = get_transactions.AsyncResult(task_id)
     if task.state == 'PENDING':

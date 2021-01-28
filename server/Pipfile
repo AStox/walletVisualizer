@@ -4,14 +4,16 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-web3 = "*"
-uniswap-python = "*"
 
 [packages]
+web3 = "*"
 flask = "*"
 eth-abi = "*"
 celery = "*"
 redis = "*"
+gunicorn = "*"
+requests = "*"
+numpy = "*"
 
 [requires]
 python_version = "3.8"

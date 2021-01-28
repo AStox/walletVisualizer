@@ -1,8 +1,8 @@
 import re
 from functools import reduce
 
-from contracts import Contracts
-from utils import get_price
+from app.contracts import Contracts
+from app.utils import get_price
 
 
 class PriceInfo:
