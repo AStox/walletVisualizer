@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+from app.tasks import get_transactions
 from flask import Flask, Blueprint, request, jsonify
 
 api = Blueprint('api', __name__)
@@ -13,9 +14,7 @@ def main():
 
 @api.route("/wallet/<wallet>", methods=['GET'])
 def get_wallet_transactions(wallet):
-    print("HELLOO")
     blockNumber = request.args.get("blockNumber")
-    from app.tasks import get_transactions
     task = get_transactions.delay(wallet, blockNumber)
     return jsonify({'task_id': task.id}), 202
 

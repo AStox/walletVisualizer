@@ -1,7 +1,7 @@
 import os
 from flask import Flask
 from config import Config
-from celery import Celery
+from app.celery import celery
 from redis import StrictRedis
 # from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -28,7 +28,7 @@ def create_app(config_class=Config()):
     # Celery tasks
     app.logger.info("Registering tasks")
 
-    # import app.tasks as _
+    import app.tasks as _
 
     app.logger.info("Initializing Celery")
     
@@ -38,6 +38,6 @@ def create_app(config_class=Config()):
 
     return app
 
-app = create_app()
-celery = Celery(app.name, broker='redis://redis:6379/0', backend='redis://redis:6379/0',)
-celery.conf.update(app.config)
+# app = create_app()
+# celery = Celery(app.name, broker='redis://redis:6379/0', backend='redis://redis:6379/0',)
+# celery.conf.update(app.config)

@@ -12,6 +12,8 @@ import { forEach, includes } from "lodash";
 import "./Main.sass";
 import "react-toggle/style.css";
 
+const API_URL = "/api";
+
 const Main = () => {
   const targetRef = useRef();
   const [addressData, setAddressData] = useState<
@@ -37,7 +39,7 @@ const Main = () => {
   }, [taskId]);
 
   const fetchTaskStatus = () => {
-    const url = `/api/status/${taskId}`;
+    const url = `${API_URL}/status/${taskId}`;
     fetch(url)
       .then((res) => res.json())
       .then((res) => {
@@ -118,7 +120,7 @@ const Main = () => {
   const onSubmit = (data: any) => {
     const address = data.address.toLowerCase();
     const blockNumber = addressData?.last_block_number || 0;
-    const url = `/api/wallet/${address}?blockNumber=${blockNumber}`;
+    const url = `${API_URL}/wallet/${address}?blockNumber=${blockNumber}`;
 
     fetch(url)
       .then((res) => res.json())

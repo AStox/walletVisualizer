@@ -2,12 +2,15 @@ version: "3"
 services:
   client:
     container_name: client
+    image: clientimg
     build:
       context: ./client
       dockerfile: Dockerfile
     ports:
       - 80:80
       - 443:443
+    depends_on:
+      - server
     # volumes:
     #   - /home/ubuntu/ssl:/etc/nginx/certs
 
@@ -15,11 +18,34 @@ services:
     restart: always
     container_name: server
     build: ./server
-    expose:
-      - 5000
+    image: serverimg
+    links:
+      - redis
+    # expose:
+    #   - 5000
     volumes:
       - ./server:/usr/src/app
-    environment:
+    command: [/usr/src/app/start-gunicorn.sh]
+    environment: &flaskenv
       - FLASK_ENV=development
       - FLASK_APP=app.py
       - FLASK_DEBUG=1
+
+  redis:
+    container_name: redis
+    image: redis:latest
+    restart: on-failure:10
+    # ports:
+    #   - 6379:6379
+    # command: ["redis-server", "--loglevel", "verbose"]
+
+  celery:
+    container_name: celery
+    image: serverimg
+    depends_on:
+      - server
+    restart: on-failure:10
+    command: [./start-celery.sh]
+    environment: *flaskenv
+    links:
+      - redis

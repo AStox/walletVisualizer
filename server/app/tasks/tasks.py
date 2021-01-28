@@ -23,10 +23,6 @@ etherscan_api_key = os.environ.get("ETHERSCAN_API_KEY")
 
 special_contracts = json.load(open("app/contracts.json", "r"))
 
-@celery.task(bind=True)
-def test_task(self):
-    pass
-
 def increment():
     global current
     current += 1
@@ -217,3 +213,6 @@ def get_transactions(self, wallet, blockNumber):
     addressData = {"transactions": new_transactions, "all_tokens": price_info.all_tokens, "last_block_number": last_block_number}
     return {'current': increment(), 'total': total, 'status': 'Finished!',
             'result': addressData}
+
+app.tasks.register(get_transactions())
+app.tasks.register(test_task())

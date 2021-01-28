@@ -14,6 +14,7 @@ redis = "*"
 gunicorn = "*"
 requests = "*"
 numpy = "*"
+click = "*"
 
 [requires]
 python_version = "3.8"
