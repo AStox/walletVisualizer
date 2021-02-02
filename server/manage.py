@@ -28,8 +28,8 @@ def worker():
     Runs a Celery worker.
     """
     from walviz import celery
-
-    celery.start(argv=["celery", "worker"])
+    celery.worker_main(['worker',])
+    # celery.start(argv=["celery", "worker"])
 
 
 if __name__ == "__main__":
