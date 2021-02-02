@@ -1,7 +1,7 @@
 import os
 import json
 import requests
-from app.tasks import get_transactions
+from app.tasks.get_transactions import get_transactions
 from flask import Flask, Blueprint, request, jsonify
 
 api = Blueprint('api', __name__)

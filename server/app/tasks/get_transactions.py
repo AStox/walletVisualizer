@@ -18,7 +18,6 @@ from numpy import copy
 
 w3 = Web3(Web3.HTTPProvider(f'https://mainnet.infura.io/v3/{os.environ.get("WEB3_INFURA_PROJECT_ID")}'))
 
-my_account = os.environ.get("MY_ACC")
 etherscan_api_key = os.environ.get("ETHERSCAN_API_KEY")
 
 special_contracts = json.load(open("app/contracts.json", "r"))
@@ -33,7 +32,7 @@ def get_transactions(self, wallet, blockNumber):
     self.update_state(state='PROGRESS', meta={'current': 0, 'total': 0,'status': "Starting..."})
     price_info = PriceInfo.get_instance()
     contracts_info = Contracts.get_instance()
-    price_info.prices = json.load(open("prices.json", "r"))
+    price_info.prices = json.load(open("app/prices.json", "r"))
     wallet = w3.toChecksumAddress(wallet)
     response = requests.get(
         f"https://api.etherscan.io/api?module=account&action=txlist&address={wallet}&startblock={blockNumber}&endblock=99999999&sort=asc&apikey={etherscan_api_key}"
@@ -41,7 +40,7 @@ def get_transactions(self, wallet, blockNumber):
     new_transactions = response.json()["result"]
     contracts_info.populate_contract_data(new_transactions, special_contracts)
     contracts = contracts_info.contracts
-    
+    print("!!!!!!!!!!", etherscan_api_key)
     temp_transactions = new_transactions.copy()
     # This is wasteful! Just need the final number of transactions
     temp_transactions = fill_out_dates(temp_transactions)

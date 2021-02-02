@@ -12,7 +12,8 @@ services:
     depends_on:
       - server
     environment:
-      - NGINX_HOST=foobar.com
+      - WEB3_INFURA_PROJECT_ID=${WEB3_INFURA_PROJECT_ID}
+      - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
     # volumes:
     #   - /home/ubuntu/ssl:/etc/nginx/certs
 
@@ -33,6 +34,8 @@ services:
       - FLASK_APP=app.py
       - FLASK_DEBUG=1
       - REDIS_HOST=redis
+      - WEB3_INFURA_PROJECT_ID=${WEB3_INFURA_PROJECT_ID}
+      - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
 
   redis:
     container_name: redis
