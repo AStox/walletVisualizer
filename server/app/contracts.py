@@ -24,7 +24,6 @@ class Contracts:
 
     
     def populate_contract_data(self, transactions, special_contracts):
-        print("haha")
         for key, value in special_contracts.items():
             abi = fetch_abi(value["address"])
             if abi:
@@ -33,10 +32,9 @@ class Contracts:
                 contract = w3.eth.contract(w3.toChecksumAddress(value["address"]), abi=abi)
                 decimals = None
                 if 'decimals' in dir(contract.functions):
-                    print("go")
                     decimals = contract.functions.decimals().call()
-                    print("dont go")
                 self.contracts[symbol] = Contract(abi=abi, symbol=symbol, address=value["address"], name=name, decimals=decimals)
+        
         return self.contracts
 
     def get_contract(self, address=None, symbol=None):
@@ -119,6 +117,7 @@ def fetch_abi(address, old_contracts=None, debug=False):
     if int(response.json()["status"]) == 1:
         return response.json()["result"]
     else:
+        print(response.json()["result"])
         if debug:
             if (old_contracts):
                 for key, value in old_contracts.items():

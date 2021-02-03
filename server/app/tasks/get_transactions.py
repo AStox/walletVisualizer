@@ -15,7 +15,6 @@ from app.transactions import fill_out_dates, group_by_date
 from functools import reduce
 from numpy import copy
 # from web3.auto.infura import w3
-
 w3 = Web3(Web3.HTTPProvider(f'https://mainnet.infura.io/v3/{os.environ.get("WEB3_INFURA_PROJECT_ID")}'))
 
 etherscan_api_key = os.environ.get("ETHERSCAN_API_KEY")
@@ -40,7 +39,6 @@ def get_transactions(self, wallet, blockNumber):
     new_transactions = response.json()["result"]
     contracts_info.populate_contract_data(new_transactions, special_contracts)
     contracts = contracts_info.contracts
-    print("!!!!!!!!!!", etherscan_api_key)
     temp_transactions = new_transactions.copy()
     # This is wasteful! Just need the final number of transactions
     temp_transactions = fill_out_dates(temp_transactions)
