@@ -7,6 +7,8 @@ RUN yarn install --production
 
 COPY . /usr/src/app
 
+RUN ls public/
+
 RUN yarn build
 
 FROM nginx:alpine
