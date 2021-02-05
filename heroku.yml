@@ -1,10 +1,10 @@
-setup:
-  addons:
-    - plan: heroku-redis
+# setup:
+# addons:
+#   - plan: heroku-redis
 build:
   docker:
-    server: server/Dockerfile
-    celery: server/Dockerfile
+    # server: server/Dockerfile
+    # celery: server/Dockerfile
     client: client/Dockerfile
   config:
     WEB3_INFURA_PROJECT_ID: ${WEB3_INFURA_PROJECT_ID}
@@ -13,6 +13,6 @@ build:
 #   command:
 #     - ./deployment-tasks.sh
 #   image: worker
-run:
-  server: ./start-gunicorn.sh
-  celery: ./start-celery.sh
+# run:
+# server: ./start-gunicorn.sh
+# celery: ./start-celery.sh
