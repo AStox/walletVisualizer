@@ -1,0 +1,13 @@
+setup:
+  addons:
+    - plan: heroku-redis
+build:
+  docker:
+    web: Dockerfile
+    worker: Dockerfile
+  config:
+    WEB3_INFURA_PROJECT_ID: ${WEB3_INFURA_PROJECT_ID}
+    ETHERSCAN_API_KEY: ${ETHERSCAN_API_KEY}
+run:
+  web: ./start-gunicorn.sh
+  worker: ./start-celery.sh

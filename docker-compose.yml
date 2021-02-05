@@ -28,7 +28,7 @@ services:
     #   - 5000
     volumes:
       - ./server:/usr/src/app
-    command: [/usr/src/app/start-gunicorn.sh]
+    # command: [/usr/src/app/start-gunicorn.sh]
     environment: &flaskenv
       - FLASK_ENV=development
       - FLASK_APP=app.py

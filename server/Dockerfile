@@ -10,9 +10,9 @@ COPY Pipfile Pipfile.lock /usr/src/app/
 RUN pipenv install --system --deploy --ignore-pipfile
 
 COPY app ./app
-Copy *.sh \ /usr/src/app/
+COPY *.sh \ /usr/src/app/
 
-
+CMD /usr/src/app/start-gunicorn.sh
 # CMD /usr/src/app/start-gunicorn.sh
 
 # ENTRYPOINT [ "flask" ]

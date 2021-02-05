@@ -1,0 +1,6 @@
+build:
+  docker:
+    web: Dockerfile
+  config:
+    WEB3_INFURA_PROJECT_ID: ${WEB3_INFURA_PROJECT_ID}
+    ETHERSCAN_API_KEY: ${ETHERSCAN_API_KEY}
