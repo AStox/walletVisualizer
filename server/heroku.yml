@@ -8,6 +8,10 @@ build:
   config:
     WEB3_INFURA_PROJECT_ID: ${WEB3_INFURA_PROJECT_ID}
     ETHERSCAN_API_KEY: ${ETHERSCAN_API_KEY}
+release:
+  image: web
+  command:
+    - echo 'Starting client after deployment!';
 run:
   web: ./start-gunicorn.sh
   worker: ./start-celery.sh
