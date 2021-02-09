@@ -1,2 +1,2 @@
 #!/bin/sh
-gunicorn -b 0.0.0.0:5000 walviz:app
+gunicorn -b 0.0.0.0:$PORT walviz:app
