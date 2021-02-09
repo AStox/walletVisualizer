@@ -18,7 +18,7 @@ class FlaskCelery(Celery):
     def init_app(self, app: Flask):
         self.app = app
         self.config_from_object(
-            {'broker_url': app.config['CELERY_BROKER_URL'], 'result_backend': app.config['CELERY_RESULT_BACKEND']}
+            {'broker_url': app.config['BROKER_URL'], 'result_backend': app.config['CELERY_RESULT_BACKEND']}
         )
 
         # signals.task_prerun.connect(self.add_task_flask_context)
