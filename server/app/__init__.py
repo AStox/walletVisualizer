@@ -23,9 +23,7 @@ def create_app(config_class=Config()):
     #     if view_name is not None:
     #         view = importlib.import_module(f"app.views.{view_name}")
     #         app.register_blueprint(view.mod)
-    print('yup')
     from app.views.api import api
-    print('yfdf')
     app.register_blueprint(api, url_prefix='/api')
     # Celery tasks
     app.logger.info("Registering tasks")
@@ -34,9 +32,6 @@ def create_app(config_class=Config()):
 
     app.logger.info("Initializing Celery")
     celery.init_app(app)
-
-    app.logger.info("Registering schemas")
-    # import app.schemas as _
 
     return app
 
