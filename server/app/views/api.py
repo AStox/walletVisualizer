@@ -1,14 +1,14 @@
 import os
 import json
 import requests
-from app.tasks.get_transactions import get_transactions
+from app.tasks.transactions import get_transactions
 from flask import Flask, Blueprint, request, jsonify
 
 api = Blueprint('api', __name__)
 
 @api.route("/")
 def main():
-    from app.tasks import test_task
+    from app.tasks.test import test_task
     task = test_task.delay()
     return "hi"
 

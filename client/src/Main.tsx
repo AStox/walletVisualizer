@@ -43,7 +43,6 @@ const Main = () => {
     fetch(url)
       .then((res) => res.json())
       .then((res) => {
-        console.log(res);
         if (res.state === "SUCCESS") {
           formatRawData(res.result);
           setProgress(null);

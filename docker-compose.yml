@@ -1,41 +1,41 @@
 version: "3"
 services:
-  client:
-    container_name: client
-    image: clientimg
-    build:
-      context: ./client
-      dockerfile: Dockerfile
-    ports:
-      - 80:80
-      - 443:443
-    depends_on:
-      - server
-    environment:
-      - WEB3_INFURA_PROJECT_ID=${WEB3_INFURA_PROJECT_ID}
-      - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
-    # volumes:
-    #   - /home/ubuntu/ssl:/etc/nginx/certs
+  # client:
+  #   container_name: client
+  #   image: clientimg
+  #   build:
+  #     context: ./client
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - 80:80
+  #     - 443:443
+  #   depends_on:
+  #     - server
+  #   environment:
+  #     - WEB3_INFURA_PROJECT_ID=${WEB3_INFURA_PROJECT_ID}
+  #     - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
+  #   # volumes:
+  #   #   - /home/ubuntu/ssl:/etc/nginx/certs
 
-  server:
-    restart: always
-    container_name: server
-    build: ./server
-    image: serverimg
-    links:
-      - redis
-    # expose:
-    #   - 5000
-    volumes:
-      - ./server:/usr/src/app
-    # command: [/usr/src/app/start-gunicorn.sh]
-    environment: &flaskenv
-      - FLASK_ENV=development
-      - FLASK_APP=app.py
-      - FLASK_DEBUG=1
-      - REDIS_HOST=redis
-      - WEB3_INFURA_PROJECT_ID=${WEB3_INFURA_PROJECT_ID}
-      - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
+  # server:
+  #   restart: always
+  #   container_name: server
+  #   build: ./server
+  #   image: serverimg
+  #   links:
+  #     - redis
+  #   # expose:
+  #   #   - 5000
+  #   volumes:
+  #     - ./server:/usr/src/app
+  #   # command: [/usr/src/app/start-gunicorn.sh]
+  #   environment: &flaskenv
+  #     - FLASK_ENV=development
+  #     - FLASK_APP=app.py
+  #     - FLASK_DEBUG=1
+  #     - REDIS_HOST=redis
+  #     - WEB3_INFURA_PROJECT_ID=${WEB3_INFURA_PROJECT_ID}
+  #     - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
 
   redis:
     container_name: redis
@@ -48,10 +48,16 @@ services:
   celery:
     container_name: celery
     image: serverimg
-    depends_on:
-      - server
+    # depends_on:
+    #   - server
     restart: on-failure:10
     command: [./start-celery.sh]
-    environment: *flaskenv
+    environment: &flaskenv
+      - FLASK_ENV=development
+      - FLASK_APP=app.py
+      - FLASK_DEBUG=1
+      - REDIS_HOST=redis
+      - WEB3_INFURA_PROJECT_ID=${WEB3_INFURA_PROJECT_ID}
+      - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
     links:
       - redis

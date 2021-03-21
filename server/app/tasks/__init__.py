@@ -1,6 +1,6 @@
 __all__ = [
-    "test_task",
-    "get_transactions"
+    "test",
+    "transactions"
 ]
 
 from . import *
